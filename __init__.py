@@ -21,7 +21,8 @@ from bpy.types import AddonPreferences
 from . import (
     ui,
     preferences,
-    utils
+    utils,
+    operators
 )
 
 # Setup paths to include vendor packages
@@ -103,6 +104,9 @@ def register():
     # Register preferences 
     bpy.utils.register_class(preferences.KitsuneAddonPreferences)
     
+    # Register operators
+    operators.register()
+    
     # Register UI components
     ui.register()
     
@@ -130,6 +134,9 @@ def unregister():
     
     # Unregister UI components
     ui.unregister()
+    
+    # Unregister operators
+    operators.unregister()
     
     # Unregister preferences
     bpy.utils.unregister_class(preferences.KitsuneAddonPreferences)
