@@ -247,12 +247,6 @@ class KITSUNE_OT_execute_code(Operator):
             self.report({'ERROR'}, "No code to execute")
             return {'CANCELLED'}
         
-        # Get confirmation if required in preferences
-        preferences = context.preferences.addons["kitsune"].preferences
-        if preferences.confirm_code_execution:
-            if not self.confirm_execution():
-                return {'CANCELLED'}
-        
         # Execute the code
         code = ui_props.pending_code
         success, result = utils.safe_execute_code(code)
@@ -266,14 +260,21 @@ class KITSUNE_OT_execute_code(Operator):
         
         return {'FINISHED'}
     
-    def confirm_execution(self):
-        """Show confirmation dialog."""
-        return bpy.context.window_manager.invoke_confirm(self, event=None)
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="実行しますか？")
+        # コードプレビュー
+        code_box = layout.box()
+        code_box.label(text="コード:")
+        for line in context.scene.kitsune_ui.pending_code.split('\n')[:10]:  # 最初の10行のみ表示
+            code_box.label(text=line)
+        if len(context.scene.kitsune_ui.pending_code.split('\n')) > 10:
+            code_box.label(text="...")
     
     def invoke(self, context, event):
         preferences = context.preferences.addons["kitsune"].preferences
         if preferences.confirm_code_execution:
-            return context.window_manager.invoke_confirm(self, event=event)
+            return context.window_manager.invoke_props_dialog(self, width=600)
         return self.execute(context)
 
 # Cancel code execution operator
@@ -425,18 +426,71 @@ class KITSUNE_OT_clear_chat(Operator):
         self.report({'INFO'}, "Conversation cleared")
         return {'FINISHED'}
     
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="会話履歴を消去しますか？")
+        layout.label(text="この操作は取り消せません。")
+    
     def invoke(self, context, event):
-        return context.window_manager.invoke_confirm(self, event=event)
+        return context.window_manager.invoke_props_dialog(self)
+
+# チャットを開始するボタンを表示するパネル
+class KITSUNE_PT_chat_launcher(Panel):
+    """Kitsune Chat Launcher Panel in the 3D View sidebar."""
+    
+    bl_label = "Kitsune Chat"
+    bl_idname = "KITSUNE_PT_chat_launcher"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Kitsune'
+    bl_options = {'DEFAULT_CLOSED'}
+    
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("kitsune.start_chat", text="チャットを開始", icon='OUTLINER_OB_FONT')
+
+# チャットモーダルを起動するオペレーター
+class KITSUNE_OT_start_chat(Operator):
+    """Start a chat session with Kitsune."""
+    
+    bl_idname = "kitsune.start_chat"
+    bl_label = "Start Chat"
+    bl_description = "Open a chat dialog with Kitsune"
+    
+    chat_input: StringProperty(
+        name="Message",
+        description="Type your message here"
+    )
+    
+    def execute(self, context):
+        return {'FINISHED'}
+    
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=500)
+    
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Kitsuneとチャット")
+        
+        # メッセージ入力欄
+        layout.prop(self, "chat_input")
+        
+        # サイドバーへの誘導
+        info_box = layout.box()
+        info_box.label(text="サイドバーの'Kitsune'タブで")
+        info_box.label(text="より詳細なチャット機能をご利用いただけます")
 
 # Classes to register
 classes = (
     KitsuneChatMessage,
     KitsuneUIProperties,
     KITSUNE_PT_chat_panel,
+    KITSUNE_PT_chat_launcher,
     KITSUNE_OT_preview_code,
     KITSUNE_OT_execute_code,
     KITSUNE_OT_cancel_code,
     KITSUNE_OT_send_message,
+    KITSUNE_OT_start_chat,
     KITSUNE_OT_clear_chat
 )
 

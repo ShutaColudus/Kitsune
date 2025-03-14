@@ -47,6 +47,11 @@ def log_error(message):
         message (str): The message to log
     """
     print(f"[KITSUNE ERROR] {message}")
+    # エラーが発生した場合、モーダルでメッセージを表示
+    try:
+        show_message_box(message, "Kitsune Error", 'ERROR')
+    except Exception as e:
+        print(f"[KITSUNE ERROR] Failed to show error message box: {str(e)}")
 
 def log_exception(e):
     """
@@ -201,9 +206,140 @@ def check_dependencies():
     # Check for requests
     try:
         import requests
-        log_debug(f"Found requests version: {requests.__version__ if hasattr(requests, '__version__') else 'unknown'}")
+        try:
+            # サブモジュールも確認
+            import requests.sessions
+            import requests.adapters
+            log_debug(f"Found requests version: {requests.__version__ if hasattr(requests, '__version__') else 'unknown'} with submodules")
+        except ImportError as e:
+            log_error(f"Failed to import requests submodules: {str(e)}")
+            missing.append("requests submodules")
     except ImportError as e:
         log_error(f"Failed to import requests: {str(e)}")
         missing.append("requests")
     
     return len(missing) == 0, missing
+
+def show_message_box(message, title="Message", icon='INFO'):
+    """
+    Show a message box to the user.
+    
+    Args:
+        message (str): Message to display
+        title (str, optional): Title of the message box. Defaults to "Message".
+        icon (str, optional): Icon to display. Defaults to 'INFO'.
+    """
+    def draw(self, context):
+        self.layout.label(text=message)
+    
+    bpy.context.window_manager.popup_menu(draw, title=title, icon=icon)
+
+def cleanup_unused_files():
+    """
+    Clean up any unused or temporary files.
+    
+    Returns:
+        tuple: (success, message)
+    """
+    try:
+        # この関数に削除対象のファイルを追加
+        addon_dir = os.path.dirname(__file__)
+        
+        # 削除対象のファイルパターン
+        patterns_to_remove = [
+            "*.pyc",
+            "__pycache__",
+            "*.bak",
+            "*.tmp"
+        ]
+        
+        deleted_count = 0
+        
+        for pattern in patterns_to_remove:
+            for root, dirs, files in os.walk(addon_dir):
+                if pattern == "__pycache__":
+                    if "__pycache__" in dirs:
+                        pycache_path = os.path.join(root, "__pycache__")
+                        for pyc_file in os.listdir(pycache_path):
+                            try:
+                                os.remove(os.path.join(pycache_path, pyc_file))
+                                deleted_count += 1
+                            except:
+                                pass
+                        try:
+                            os.rmdir(pycache_path)
+                            log_debug(f"Removed directory: {pycache_path}")
+                        except:
+                            pass
+                else:
+                    import fnmatch
+                    for filename in fnmatch.filter(files, pattern):
+                        try:
+                            os.remove(os.path.join(root, filename))
+                            log_debug(f"Removed file: {os.path.join(root, filename)}")
+                            deleted_count += 1
+                        except:
+                            pass
+        
+        return True, f"Cleaned up {deleted_count} unused files"
+    except Exception as e:
+        log_exception(e)
+        return False, f"Error cleaning up files: {str(e)}"
+
+def check_ui_resources():
+    """
+    Check if UI resources are available and accessible.
+    
+    Returns:
+        bool: True if all resources are available, False otherwise
+    """
+    try:
+        # UI機能の基本的なチェック
+        log_debug("Checking UI resources...")
+        
+        # Blenderのウィンドウマネージャーが利用可能か確認
+        if not hasattr(bpy, "context") or not hasattr(bpy.context, "window_manager"):
+            log_error("Window manager not available")
+            return False
+        
+        # モーダルダイアログをサポートしているか確認
+        test_operator_registered = False
+        
+        # テスト用オペレーター
+        class KITSUNE_OT_test_modal(bpy.types.Operator):
+            bl_idname = "kitsune.test_modal"
+            bl_label = "Test Modal"
+            bl_options = {'INTERNAL'}
+            
+            def execute(self, context):
+                return {'FINISHED'}
+                
+            def invoke(self, context, event):
+                return context.window_manager.invoke_props_dialog(self)
+                
+            def draw(self, context):
+                self.layout.label(text="Modal test")
+        
+        try:
+            # テスト用オペレーターを一時的に登録
+            bpy.utils.register_class(KITSUNE_OT_test_modal)
+            test_operator_registered = True
+            
+            # すぐに登録解除
+            bpy.utils.unregister_class(KITSUNE_OT_test_modal)
+            log_debug("Modal dialog support confirmed")
+            return True
+        except Exception as e:
+            log_error(f"Failed to register test modal operator: {str(e)}")
+            return False
+        finally:
+            # 万が一登録されたままなら登録解除
+            if test_operator_registered:
+                try:
+                    bpy.utils.unregister_class(KITSUNE_OT_test_modal)
+                except:
+                    pass
+    
+    except Exception as e:
+        log_exception(e)
+        return False

@@ -16,6 +16,7 @@ bl_info = {
 import bpy
 import sys
 import os
+import importlib
 from bpy.types import AddonPreferences
 from . import (
     ui,
@@ -41,14 +42,41 @@ def setup_vendor_packages():
         from . import vendor
         utils.log_debug("Vendor package initialized")
         
+        # 明示的にrequestsを再ロード
+        if 'requests' in sys.modules:
+            importlib.reload(sys.modules['requests'])
+            utils.log_debug("Requests module reloaded")
+        
         # Try to import actual requests package
         try:
             import requests
+            # サブモジュールの明示的なインポート
+            import requests.adapters
+            import requests.auth
+            import requests.sessions
+            
             utils.log_debug(f"Requests module found: {requests.__version__ if hasattr(requests, '__version__') else 'unknown version'}")
         except ImportError as e:
             utils.log_error(f"Requests module import error: {str(e)}")
     except ImportError as e:
         utils.log_error(f"Vendor package not properly initialized: {str(e)}")
+
+def cleanup_on_startup():
+    """Perform cleanup operations on startup."""
+    utils.log_info("Performing startup cleanup...")
+    success, message = utils.cleanup_unused_files()
+    if success:
+        utils.log_info(message)
+    else:
+        utils.log_error(message)
+
+def check_ui_capabilities():
+    """Check UI capabilities and resources."""
+    ui_check = utils.check_ui_resources()
+    if ui_check:
+        utils.log_info("UI resources check passed")
+    else:
+        utils.log_error("UI resources check failed - モーダルダイアログが表示されない可能性があります")
 
 def register():
     """Register the addon."""
@@ -63,8 +91,14 @@ def register():
         utils.log_error(message)
         # We'll still register, but warning is logged
     
+    # クリーンアップの実行
+    cleanup_on_startup()
+    
     # Setup vendor packages
     setup_vendor_packages()
+    
+    # UIリソースのチェック
+    check_ui_capabilities()
     
     # Register preferences 
     bpy.utils.register_class(preferences.KitsuneAddonPreferences)
@@ -72,10 +106,28 @@ def register():
     # Register UI components
     ui.register()
     
+    # 登録完了メッセージを表示
     utils.log_info("Kitsune addon registered successfully")
+    
+    # インストール確認メッセージをモーダルで表示
+    def show_startup_message():
+        utils.show_message_box(
+            "Kitsuneアドオンが正常に登録されました。\n"
+            "サイドバーの'Kitsune'タブからアクセスできます。",
+            "Kitsune起動完了",
+            'INFO'
+        )
+    
+    # 少し遅延させてメッセージを表示（Blenderの起動完了後に表示）
+    bpy.app.timers.register(show_startup_message, first_interval=1.0)
 
 def unregister():
     """Unregister the addon."""
+    # タイマーの削除
+    for timer in bpy.app.timers.items():
+        if 'show_startup_message' in str(timer):
+            bpy.app.timers.remove(timer)
+    
     # Unregister UI components
     ui.unregister()
     
