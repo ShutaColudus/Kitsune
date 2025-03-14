@@ -33,32 +33,41 @@ def setup_vendor_packages():
     
     # Add vendor directory to path if not already there
     if vendor_dir not in sys.path:
-        sys.path.append(vendor_dir)
+        sys.path.insert(0, vendor_dir)
     
-    # Check if requests is available, notify if not
+    # Initialize vendor package
     try:
+        # Import vendor to initialize it
         from . import vendor
+        utils.log_debug("Vendor package initialized")
+        
+        # Try to import actual requests package
         try:
-            from .vendor import requests
-            utils.log_debug("Requests module found in vendor directory")
-        except ImportError:
-            utils.log_error("Requests module not found in vendor directory. Some features may not work.")
-    except ImportError:
-        utils.log_error("Vendor package not properly initialized. Some features may not work.")
+            import requests
+            utils.log_debug(f"Requests module found: {requests.__version__ if hasattr(requests, '__version__') else 'unknown version'}")
+        except ImportError as e:
+            utils.log_error(f"Requests module import error: {str(e)}")
+    except ImportError as e:
+        utils.log_error(f"Vendor package not properly initialized: {str(e)}")
 
 def register():
     """Register the addon."""
+    # Set debug mode from environment variable if available
+    debug_env = os.environ.get("KITSUNE_DEBUG", "").lower()
+    if debug_env in ("1", "true", "yes", "on"):
+        utils.set_debug_mode(True)
+
     # Check Blender compatibility
     is_compatible, message = utils.check_blender_compatibility()
     if not is_compatible:
         utils.log_error(message)
         # We'll still register, but warning is logged
     
-    # Register preferences
-    bpy.utils.register_class(preferences.KitsuneAddonPreferences)
-    
     # Setup vendor packages
     setup_vendor_packages()
+    
+    # Register preferences 
+    bpy.utils.register_class(preferences.KitsuneAddonPreferences)
     
     # Register UI components
     ui.register()

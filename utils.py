@@ -6,8 +6,8 @@ import threading
 import traceback
 from datetime import datetime
 
-# Debug mode flag
-DEBUG_MODE = False
+# Debug mode flag - 開発中はデバッグモードを有効にする
+DEBUG_MODE = True
 
 def set_debug_mode(enabled):
     """
@@ -201,7 +201,9 @@ def check_dependencies():
     # Check for requests
     try:
         import requests
-    except ImportError:
+        log_debug(f"Found requests version: {requests.__version__ if hasattr(requests, '__version__') else 'unknown'}")
+    except ImportError as e:
+        log_error(f"Failed to import requests: {str(e)}")
         missing.append("requests")
     
     return len(missing) == 0, missing
