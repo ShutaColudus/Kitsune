@@ -27,7 +27,35 @@ class GoogleProvider(APIProvider):
         if not api_key or len(api_key.strip()) < 10:
             return False, "API key appears to be invalid"
             
-        return True, ""
+        # 実際にAPIにテストリクエストを送信して認証をチェック
+        try:
+            # モデルリストを取得して認証をテスト
+            test_url = f"{self._base_url}?key={api_key}"
+            response = requests.get(
+                test_url,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return True, "API key is valid"
+            elif response.status_code == 400 and "API key not valid" in response.text:
+                return False, "Invalid API key: Authentication failed"
+            elif response.status_code == 403:
+                return False, "API key unauthorized: You may not have access to this API"
+            else:
+                try:
+                    error_json = response.json()
+                    if 'error' in error_json:
+                        error_message = error_json['error'].get('message', str(error_json['error']))
+                        return False, f"API error: {error_message}"
+                except:
+                    pass
+                return False, f"API error: HTTP {response.status_code}"
+                
+        except requests.exceptions.Timeout:
+            return False, "Connection to Google Gemini API timed out"
+        except Exception as e:
+            return False, f"Error validating API key: {str(e)}"
     
     def _convert_model_name(self, full_model_name):
         """Convert full model name to Google API format."""

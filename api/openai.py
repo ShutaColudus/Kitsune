@@ -30,7 +30,38 @@ class OpenAIProvider(APIProvider):
         if not api_key.startswith("sk-"):
             return False, "OpenAI API keys should start with 'sk-'"
             
-        return True, ""
+        # 実際にAPIにテストリクエストを送信して認証をチェック
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        # モデルリストを取得するエンドポイントを使用してAPIキーの有効性を検証
+        try:
+            response = requests.get(
+                "https://api.openai.com/v1/models",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return True, "API key is valid"
+            elif response.status_code == 401:
+                return False, "Invalid API key: Authentication failed"
+            else:
+                try:
+                    error_json = response.json()
+                    if 'error' in error_json:
+                        error_message = error_json['error'].get('message', str(error_json['error']))
+                        return False, f"API error: {error_message}"
+                except:
+                    pass
+                return False, f"API error: HTTP {response.status_code}"
+                
+        except requests.exceptions.Timeout:
+            return False, "Connection to OpenAI API timed out"
+        except Exception as e:
+            return False, f"Error validating API key: {str(e)}"
     
     def _convert_model_name(self, full_model_name):
         """Convert full model name to OpenAI API format."""
