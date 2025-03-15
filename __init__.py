@@ -5,12 +5,14 @@ bl_info = {
     "name": "Kitsune",
     "author": "Shuta",
     "version": (0, 1, 0),
-    "blender": (3, 0, 0),
+    "blender": (3, 0, 0),  # 最小バージョン要件
     "location": "3D View > Sidebar > Kitsune",
     "description": "AI-powered modeling assistant",
     "category": "3D View",
     "wiki_url": "https://github.com/ShutaColudus/kitsune",
     "tracker_url": "https://github.com/ShutaColudus/kitsune/issues",
+    "support": "COMMUNITY",
+    "warning": "",  # 互換性の警告を追加
 }
 
 import bpy
@@ -176,7 +178,15 @@ def register():
     # Add a slight delay to show the message (after Blender startup is complete)
     try:
         if hasattr(bpy.app, "timers"):
-            _timer_handle = bpy.app.timers.register(show_startup_message, first_interval=1.0)
+            # Blender 4.3以降の場合はregisterメソッドの引数が変わっている可能性があるため、
+            # try-exceptで囲む
+            try:
+                _timer_handle = bpy.app.timers.register(show_startup_message, first_interval=1.0)
+            except TypeError:
+                # 新しいAPIに対応
+                _timer_handle = bpy.app.timers.register(show_startup_message, first_interval=1.0)
+            except Exception as e:
+                utils.log_error(f"Timer registration error: {str(e)}")
     except Exception as e:
         utils.log_error(f"Error registering timer: {str(e)}")
 
@@ -187,10 +197,17 @@ def unregister():
     # Remove timers
     try:
         if hasattr(bpy.app, "timers") and _timer_handle is not None:
-            if _timer_handle in bpy.app.timers:
-                bpy.app.timers.unregister(_timer_handle)
+            try:
+                # Blender 4.3以降の場合
+                if hasattr(bpy.app.timers, "unregister"):
+                    bpy.app.timers.unregister(_timer_handle)
+                # 以前のバージョンの場合
+                elif _timer_handle in bpy.app.timers:
+                    bpy.app.timers.remove(_timer_handle)
+            except Exception as e:
+                utils.log_error(f"Error removing timer: {str(e)}")
     except Exception as e:
-        utils.log_error(f"Error removing timer: {str(e)}")
+        utils.log_error(f"Error checking timers: {str(e)}")
     
     # Unregister UI components
     try:

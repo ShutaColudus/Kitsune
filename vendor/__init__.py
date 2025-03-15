@@ -19,3 +19,4 @@ for item in os.listdir(__path__[0]):
     item_path = os.path.join(__path__[0], item)
     if os.path.isdir(item_path) and item_path not in sys.path:
         sys.path.insert(0, item_path)
+        print(f"Added {item_path} to sys.path")
