@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty, PointerProperty, CollectionProperty
+from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty, PointerProperty, CollectionProperty, FloatProperty
 from . import utils
 
 # チャットの添付ファイル
@@ -19,6 +19,11 @@ class KitsuneAttachment(bpy.types.PropertyGroup):
         name="Type",
         description="添付ファイルの種類",
         default="FILE"
+    )
+    preview_image: StringProperty(
+        name="Preview Image",
+        description="画像プレビュー用のデータパス",
+        default=""
     )
 
 # チャットメッセージ
@@ -103,6 +108,7 @@ class KitsuneUIProperties(bpy.types.PropertyGroup):
         items=[
             ('CHAT', "Chat", "チャットモード"),
             ('CODE', "Code", "コードモード"),
+            ('SETTINGS', "Settings", "設定モード"),
         ],
         default='CHAT'
     )
@@ -111,6 +117,30 @@ class KitsuneUIProperties(bpy.types.PropertyGroup):
         description="添付ファイルのパス",
         default="",
         subtype='FILE_PATH'
+    )
+    panel_height: FloatProperty(
+        name="Panel Height",
+        description="パネルの高さ（0〜1の値、1で最大高）",
+        default=0.7,
+        min=0.3,
+        max=1.0
+    )
+    # チャット表示設定
+    chat_display_settings: BoolProperty(
+        name="Display Settings",
+        description="チャット表示設定を展開表示",
+        default=False
+    )
+    # 画像添付の設定
+    image_preview_size: EnumProperty(
+        name="Image Preview Size",
+        description="添付画像のプレビューサイズ",
+        items=[
+            ('SMALL', "Small", "小サイズ (128px)"),
+            ('MEDIUM', "Medium", "中サイズ (256px)"),
+            ('LARGE', "Large", "大サイズ (512px)"),
+        ],
+        default='MEDIUM'
     )
 
 # チャットセッションリスト
@@ -122,6 +152,99 @@ class KITSUNE_UL_chat_sessions(bpy.types.UIList):
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text="", icon='OUTLINER_DATA_GP_LAYER')
+
+# APIキー設定パネル
+class KITSUNE_PT_api_settings(bpy.types.Panel):
+    """API設定パネル"""
+    bl_label = "API Settings"
+    bl_idname = "KITSUNE_PT_api_settings"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Kitsune'
+    bl_parent_id = "KITSUNE_PT_chat_panel"
+    bl_options = {'DEFAULT_CLOSED'}
+    
+    @classmethod
+    def poll(cls, context):
+        return context.scene.kitsune_ui.view_mode == 'SETTINGS'
+    
+    def draw(self, context):
+        layout = self.layout
+        preferences = context.preferences.addons.get(__package__, None)
+        
+        if not preferences:
+            layout.label(text="アドオン設定が見つかりません", icon='ERROR')
+            return
+            
+        prefs = preferences.preferences
+        
+        # API Provider選択
+        layout.label(text="AIプロバイダー選択:", icon='WORLD')
+        layout.prop(prefs, "api_provider", text="")
+        
+        # 選択したプロバイダーの設定
+        selected_provider = prefs.api_provider
+        box = layout.box()
+        
+        if selected_provider == 'anthropic':
+            box.label(text="Anthropic設定:", icon='SETTINGS')
+            box.prop(prefs, "anthropic_api_key", text="API Key")
+            box.prop(prefs, "anthropic_model", text="Model")
+            
+        elif selected_provider == 'google':
+            box.label(text="Google Gemini設定:", icon='SETTINGS')
+            box.prop(prefs, "google_api_key", text="API Key")
+            box.prop(prefs, "google_model", text="Model")
+            
+        elif selected_provider == 'deepseek':
+            box.label(text="DeepSeek設定:", icon='SETTINGS')
+            box.prop(prefs, "deepseek_api_key", text="API Key")
+            box.prop(prefs, "deepseek_model", text="Model")
+            
+        elif selected_provider == 'openai':
+            box.label(text="OpenAI設定:", icon='SETTINGS')
+            box.prop(prefs, "openai_api_key", text="API Key")
+            box.prop(prefs, "openai_model", text="Model")
+        
+        # 検証ボタン
+        layout.operator("kitsune.validate_api_key", text="APIキーを検証", icon='CHECKMARK')
+
+# チャット設定パネル
+class KITSUNE_PT_chat_settings(bpy.types.Panel):
+    """チャット設定パネル"""
+    bl_label = "Chat Settings"
+    bl_idname = "KITSUNE_PT_chat_settings"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Kitsune'
+    bl_parent_id = "KITSUNE_PT_chat_panel"
+    bl_options = {'DEFAULT_CLOSED'}
+    
+    @classmethod
+    def poll(cls, context):
+        return context.scene.kitsune_ui.view_mode == 'SETTINGS'
+    
+    def draw(self, context):
+        layout = self.layout
+        preferences = context.preferences.addons.get(__package__, None)
+        
+        if not preferences:
+            layout.label(text="アドオン設定が見つかりません", icon='ERROR')
+            return
+            
+        prefs = preferences.preferences
+        
+        # チャット設定
+        layout.label(text="チャット設定:", icon='OUTLINER_OB_FONT')
+        layout.prop(prefs, "max_conversation_length", text="最大会話長")
+        layout.prop(prefs, "auto_scroll", text="自動スクロール")
+        layout.prop(prefs, "show_timestamps", text="タイムスタンプを表示")
+        
+        # UI設定
+        layout.label(text="UI設定:", icon='WINDOW')
+        kitsune_ui = context.scene.kitsune_ui
+        layout.prop(kitsune_ui, "panel_height", text="パネル高さ")
+        layout.prop(kitsune_ui, "image_preview_size", text="画像プレビューサイズ")
 
 # メインパネル
 class KITSUNE_PT_chat_panel(bpy.types.Panel):
@@ -137,23 +260,80 @@ class KITSUNE_PT_chat_panel(bpy.types.Panel):
         scene = context.scene
         kitsune_ui = scene.kitsune_ui
         
-        # チャットセッション管理
-        row = layout.row()
-        row.template_list("KITSUNE_UL_chat_sessions", "", kitsune_ui, "chat_sessions", 
-                         kitsune_ui, "active_session_index", rows=2)
-        
-        col = row.column(align=True)
-        col.operator("kitsune.new_chat", icon='ADD', text="")
-        col.operator("kitsune.delete_chat", icon='REMOVE', text="")
+        # パネルの高さを設定（領域の下部までいっぱいに表示）
+        region_height = context.region.height
+        panel_height = int(region_height * kitsune_ui.panel_height)
         
         # 表示モード切り替え
         row = layout.row(align=True)
         row.prop(kitsune_ui, "view_mode", expand=True)
         
-        # 入力フィールドと送信ボタン
-        row = layout.row()
-        row.prop(kitsune_ui, "input_text", text="")
-        row.operator("kitsune.send_message", text="Send", icon='EXPORT')
+        # チャットモードのUI
+        if kitsune_ui.view_mode == 'CHAT' or kitsune_ui.view_mode == 'CODE':
+            # チャットセッション管理
+            row = layout.row()
+            row.template_list("KITSUNE_UL_chat_sessions", "", kitsune_ui, "chat_sessions", 
+                            kitsune_ui, "active_session_index", rows=2)
+            
+            col = row.column(align=True)
+            col.operator("kitsune.new_chat", icon='ADD', text="")
+            col.operator("kitsune.delete_chat", icon='REMOVE', text="")
+            
+            # メッセージ表示エリア - 高さを拡張
+            box = layout.box()
+            box.scale_y = panel_height / 100  # スケール調整
+            
+            # ここにメッセージを表示（実際にはスクリプトで処理）
+            box.label(text="メッセージ履歴がここに表示されます")
+            
+            # スクロールボタン
+            row = layout.row(align=True)
+            row.operator("kitsune.scroll_chat", text="↑").direction = 'UP'
+            row.operator("kitsune.scroll_chat", text="↓").direction = 'DOWN'
+            
+            # ファイル添付ボタンと入力フィールド
+            box = layout.box()
+            row = box.row(align=True)
+            
+            # 添付ファイル関連
+            if kitsune_ui.attachment_path:
+                row.label(text=f"添付ファイル: {kitsune_ui.attachment_path.split('/')[-1]}")
+                row.operator("kitsune.clear_attachment", text="", icon='X')
+            else:
+                row.operator("kitsune.attach_file", text="", icon='FILE')
+                row.operator("kitsune.attach_image", text="", icon='IMAGE')
+            
+            # 入力フィールドと送信ボタン
+            row = layout.row()
+            row.prop(kitsune_ui, "input_text", text="")
+            row.operator("kitsune.send_message", text="Send", icon='EXPORT')
+        
+        # 設定モードのUI
+        elif kitsune_ui.view_mode == 'SETTINGS':
+            # 設定タブは子パネルで実装
+            pass
+
+# 画像添付オペレータ
+class KITSUNE_OT_attach_image(bpy.types.Operator):
+    """画像ファイルを添付します"""
+    bl_idname = "kitsune.attach_image"
+    bl_label = "Attach Image"
+    bl_options = {'REGISTER', 'INTERNAL'}
+    
+    filepath: StringProperty(
+        name="File Path",
+        description="添付する画像ファイルのパス",
+        subtype='FILE_PATH'
+    )
+    
+    def execute(self, context):
+        utils.log_debug(f"画像を添付します: {self.filepath}")
+        context.scene.kitsune_ui.attachment_path = self.filepath
+        return {'FINISHED'}
+    
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
 
 # 表示モード切り替え
 class KITSUNE_OT_toggle_view_mode(bpy.types.Operator):
@@ -164,10 +344,10 @@ class KITSUNE_OT_toggle_view_mode(bpy.types.Operator):
     
     def execute(self, context):
         kitsune_ui = context.scene.kitsune_ui
-        if kitsune_ui.view_mode == 'CHAT':
-            kitsune_ui.view_mode = 'CODE'
-        else:
-            kitsune_ui.view_mode = 'CHAT'
+        modes = ['CHAT', 'CODE', 'SETTINGS']
+        current_index = modes.index(kitsune_ui.view_mode)
+        next_index = (current_index + 1) % len(modes)
+        kitsune_ui.view_mode = modes[next_index]
         return {'FINISHED'}
 
 # チャットスクロール
@@ -268,7 +448,20 @@ class KITSUNE_OT_validate_api_key(bpy.types.Operator):
     
     def execute(self, context):
         utils.log_debug("APIキーを検証します")
-        self.report({'INFO'}, "APIキーの検証は実装されていません")
+        
+        preferences = context.preferences.addons.get(__package__, None)
+        if not preferences:
+            self.report({'ERROR'}, "アドオン設定が見つかりません")
+            return {'CANCELLED'}
+            
+        prefs = preferences.preferences
+        is_valid, message = prefs.validate_provider_api_key(context)
+        
+        if is_valid:
+            self.report({'INFO'}, f"APIキーは有効です: {message}")
+        else:
+            self.report({'ERROR'}, f"APIキーエラー: {message}")
+            
         return {'FINISHED'}
 
 # コードプレビュー
@@ -352,6 +545,14 @@ class KITSUNE_OT_send_message(bpy.types.Operator):
         utils.log_debug(f"メッセージを送信します: {message}")
         # メッセージ送信処理
         
+        # 添付ファイルの処理
+        if kitsune_ui.attachment_path:
+            utils.log_debug(f"添付ファイル付きで送信: {kitsune_ui.attachment_path}")
+            # 添付ファイル処理コード
+            
+            # 送信後にパスをクリア
+            kitsune_ui.attachment_path = ""
+        
         # 入力フィールドをクリア
         kitsune_ui.input_text = ""
         
@@ -392,11 +593,14 @@ classes = (
     KitsuneUIProperties,
     KITSUNE_UL_chat_sessions,
     KITSUNE_PT_chat_panel,
+    KITSUNE_PT_api_settings,
+    KITSUNE_PT_chat_settings,
     KITSUNE_OT_toggle_view_mode,
     KITSUNE_OT_scroll_chat,
     KITSUNE_OT_new_chat,
     KITSUNE_OT_delete_chat,
     KITSUNE_OT_attach_file,
+    KITSUNE_OT_attach_image,
     KITSUNE_OT_clear_attachment,
     KITSUNE_OT_validate_api_key,
     KITSUNE_OT_preview_code,
