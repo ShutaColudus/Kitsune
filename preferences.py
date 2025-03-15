@@ -12,7 +12,7 @@ from .api import get_provider_instance
 class KitsuneAddonPreferences(bpy.types.AddonPreferences):
     """Addon preferences for Kitsune."""
     
-    bl_idname = "kitsune"
+    bl_idname = __package__  # Use package name instead of hardcoded string
     
     # Debug mode
     debug_mode: BoolProperty(
@@ -237,6 +237,6 @@ def get_active_provider():
     Returns:
         APIProvider: The active provider instance
     """
-    preferences = bpy.context.preferences.addons["kitsune"].preferences
+    preferences = bpy.context.preferences.addons[__package__].preferences
     provider_id = preferences.api_provider
     return get_provider_instance(provider_id)

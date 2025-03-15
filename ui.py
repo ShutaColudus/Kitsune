@@ -124,7 +124,7 @@ class KITSUNE_PT_api_settings(Panel):
     def draw(self, context):
         try:
             layout = self.layout
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             
             # API Provider selection
             provider_box = layout.box()
@@ -181,7 +181,7 @@ class KITSUNE_PT_chat_panel(Panel):
         try:
             layout = self.layout
             ui_props = context.scene.kitsune_ui
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             
             # API Settings button
             settings_row = layout.row(align=True)
@@ -401,7 +401,7 @@ class KITSUNE_OT_validate_api_key(Operator):
     
     def execute(self, context):
         try:
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             
             is_valid, message = preferences.validate_provider_api_key()
             
@@ -509,7 +509,7 @@ class KITSUNE_OT_execute_code(Operator):
     
     def invoke(self, context, event):
         try:
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             if preferences.confirm_code_execution:
                 return context.window_manager.invoke_props_dialog(self, width=600)
             return self.execute(context)
@@ -567,7 +567,7 @@ class KITSUNE_OT_send_message(Operator):
                 return {'CANCELLED'}
             
             # Check if AI provider and key are set
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             provider = get_active_provider()
             
             if not provider:
@@ -620,7 +620,7 @@ class KITSUNE_OT_send_message(Operator):
             message.timestamp = utils.format_timestamp()
             
             # Auto-scroll to new message if enabled
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             if preferences.auto_scroll:
                 ui_props.active_message_index = len(ui_props.messages) - 1
             
@@ -735,7 +735,7 @@ class KITSUNE_PT_launcher(Panel):
             layout = self.layout
             
             # Get provider info for display
-            preferences = context.preferences.addons["kitsune"].preferences
+            preferences = context.preferences.addons[__package__].preferences
             provider_name = preferences.api_provider.capitalize()
             model_attr = f"{preferences.api_provider}_model"
             model_name = getattr(preferences, model_attr, "Unknown").split('/')[-1]

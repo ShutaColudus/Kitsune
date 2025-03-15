@@ -18,6 +18,10 @@ import sys
 import os
 import importlib
 from bpy.types import AddonPreferences
+
+# Use directory name as addon ID
+ADDON_ID = os.path.basename(os.path.dirname(__file__))
+print(f"Addon ID: {ADDON_ID}")
 from . import (
     ui,
     preferences,
