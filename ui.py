@@ -16,11 +16,11 @@ from bpy.types import (
 import json
 import time
 from . import utils
-from .api import (
-    APIRequestThread,
+from .api import APIRequestThread, get_provider_instance, (
     format_code_for_execution,
     create_context_info
 )
+# Fixed import
 from .preferences import get_active_provider
 
 # Define a property group to store chat messages
@@ -170,6 +170,7 @@ class KITSUNE_PT_chat_panel(Panel):
     bl_category = 'Kitsune'
     
     def draw(self, context):
+        try:
         layout = self.layout
         ui_props = context.scene.kitsune_ui
         preferences = context.preferences.addons["kitsune"].preferences
@@ -385,7 +386,13 @@ class KITSUNE_OT_validate_api_key(Operator):
     bl_label = "Validate API Key"
     bl_description = "Validate the API key for the selected provider"
     
-    def execute(self, context):
+            except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
+
+def execute(self, context):
         preferences = context.preferences.addons["kitsune"].preferences
         
         is_valid, message = preferences.validate_provider_api_key()
@@ -411,7 +418,13 @@ class KITSUNE_OT_preview_code(Operator):
         default=0
     )
     
-    def execute(self, context):
+            except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
+
+def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
         # Validate message index
@@ -438,7 +451,13 @@ class KITSUNE_OT_execute_code(Operator):
     bl_label = "Execute Code"
     bl_description = "Execute the generated code"
     
-    def execute(self, context):
+            except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
+
+def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
         if not ui_props.has_pending_code or not ui_props.pending_code:
@@ -483,7 +502,13 @@ class KITSUNE_OT_cancel_code(Operator):
     bl_label = "Cancel Code Execution"
     bl_description = "Cancel the pending code execution"
     
-    def execute(self, context):
+            except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
+
+def execute(self, context):
         ui_props = context.scene.kitsune_ui
         ui_props.has_pending_code = False
         ui_props.pending_code = ""
@@ -505,7 +530,13 @@ class KITSUNE_OT_send_message(Operator):
         default=""
     )
     
-    def execute(self, context):
+            except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
+
+def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
         # Get message from input field or parameter
@@ -617,7 +648,13 @@ class KITSUNE_OT_clear_chat(Operator):
     bl_label = "Clear Chat"
     bl_description = "Clear the conversation history"
     
-    def execute(self, context):
+            except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
+
+def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
         # Clear all messages

@@ -26,9 +26,14 @@ from . import (
 )
 
 # Setup paths to include vendor packages
-def setup_vendor_packages():
+def try:
+        setup_vendor_packages()
+        print("Vendor packages setup completed")
+    except Exception as e:
+        print(f"Error setting up vendor packages: {e}"):
     """Setup vendor packages for imports."""
-    vendor_dir = os.path.join(os.path.dirname(__file__), "vendor")
+    vendor_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "vendor"))
+    print(f"Vendor directory: {vendor_dir}")
     
     # Ensure vendor directory exists
     utils.ensure_directory_exists(vendor_dir)
@@ -119,7 +124,11 @@ def register():
     cleanup_on_startup()
     
     # Setup vendor packages
-    setup_vendor_packages()
+    try:
+        setup_vendor_packages()
+        print("Vendor packages setup completed")
+    except Exception as e:
+        print(f"Error setting up vendor packages: {e}")
     
     # Check UI resources
     check_ui_capabilities()
