@@ -122,44 +122,50 @@ class KITSUNE_PT_api_settings(Panel):
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
-        layout = self.layout
-        preferences = context.preferences.addons["kitsune"].preferences
-        
-        # API Provider selection
-        provider_box = layout.box()
-        provider_box.label(text="AI Provider:", icon='WORLD')
-        provider_box.prop(preferences, "api_provider", text="")
-        
-        # Provider-specific settings
-        selected_provider = preferences.api_provider
-        
-        if selected_provider == 'anthropic':
-            model_box = layout.box()
-            model_box.label(text="Anthropic Settings:", icon='SETTINGS')
-            model_box.prop(preferences, "anthropic_api_key", text="API Key")
-            model_box.prop(preferences, "anthropic_model", text="Model")
+        try:
+            layout = self.layout
+            preferences = context.preferences.addons["kitsune"].preferences
             
-        elif selected_provider == 'google':
-            model_box = layout.box()
-            model_box.label(text="Google Gemini Settings:", icon='SETTINGS')
-            model_box.prop(preferences, "google_api_key", text="API Key")
-            model_box.prop(preferences, "google_model", text="Model")
+            # API Provider selection
+            provider_box = layout.box()
+            provider_box.label(text="AI Provider:", icon='WORLD')
+            provider_box.prop(preferences, "api_provider", text="")
             
-        elif selected_provider == 'deepseek':
-            model_box = layout.box()
-            model_box.label(text="DeepSeek Settings:", icon='SETTINGS')
-            model_box.prop(preferences, "deepseek_api_key", text="API Key")
-            model_box.prop(preferences, "deepseek_model", text="Model")
+            # Provider-specific settings
+            selected_provider = preferences.api_provider
             
-        elif selected_provider == 'openai':
-            model_box = layout.box()
-            model_box.label(text="OpenAI Settings:", icon='SETTINGS')
-            model_box.prop(preferences, "openai_api_key", text="API Key")
-            model_box.prop(preferences, "openai_model", text="Model")
-        
-        # Validate API key button
-        validate_row = layout.row()
-        validate_row.operator("kitsune.validate_api_key", text="Validate API Key", icon='CHECKMARK')
+            if selected_provider == 'anthropic':
+                model_box = layout.box()
+                model_box.label(text="Anthropic Settings:", icon='SETTINGS')
+                model_box.prop(preferences, "anthropic_api_key", text="API Key")
+                model_box.prop(preferences, "anthropic_model", text="Model")
+                
+            elif selected_provider == 'google':
+                model_box = layout.box()
+                model_box.label(text="Google Gemini Settings:", icon='SETTINGS')
+                model_box.prop(preferences, "google_api_key", text="API Key")
+                model_box.prop(preferences, "google_model", text="Model")
+                
+            elif selected_provider == 'deepseek':
+                model_box = layout.box()
+                model_box.label(text="DeepSeek Settings:", icon='SETTINGS')
+                model_box.prop(preferences, "deepseek_api_key", text="API Key")
+                model_box.prop(preferences, "deepseek_model", text="Model")
+                
+            elif selected_provider == 'openai':
+                model_box = layout.box()
+                model_box.label(text="OpenAI Settings:", icon='SETTINGS')
+                model_box.prop(preferences, "openai_api_key", text="API Key")
+                model_box.prop(preferences, "openai_model", text="Model")
+            
+            # Validate API key button
+            validate_row = layout.row()
+            validate_row.operator("kitsune.validate_api_key", text="Validate API Key", icon='CHECKMARK')
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
 
 # Chat panel
 class KITSUNE_PT_chat_panel(Panel):
@@ -488,21 +494,34 @@ class KITSUNE_OT_execute_code(Operator):
             return {'CANCELLED'}
     
     def draw(self, context):
-        layout = self.layout
-        layout.label(text="Execute code?")
-        # Code preview
-        code_box = layout.box()
-        code_box.label(text="Code:")
-        for line in context.scene.kitsune_ui.pending_code.split('\n')[:10]:  # Display only first 10 lines
-            code_box.label(text=line)
-        if len(context.scene.kitsune_ui.pending_code.split('\n')) > 10:
-            code_box.label(text="...")
+        try:
+            layout = self.layout
+            layout.label(text="Execute code?")
+            # Code preview
+            code_box = layout.box()
+            code_box.label(text="Code:")
+            for line in context.scene.kitsune_ui.pending_code.split('\n')[:10]:  # Display only first 10 lines
+                code_box.label(text=line)
+            if len(context.scene.kitsune_ui.pending_code.split('\n')) > 10:
+                code_box.label(text="...")
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
     
     def invoke(self, context, event):
-        preferences = context.preferences.addons["kitsune"].preferences
-        if preferences.confirm_code_execution:
-            return context.window_manager.invoke_props_dialog(self, width=600)
-        return self.execute(context)
+        try:
+            preferences = context.preferences.addons["kitsune"].preferences
+            if preferences.confirm_code_execution:
+                return context.window_manager.invoke_props_dialog(self, width=600)
+            return self.execute(context)
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI invoke error: {str(e)}")
+            return {'CANCELLED'}
 
 # Cancel code execution operator
 class KITSUNE_OT_cancel_code(Operator):
@@ -597,60 +616,66 @@ class KITSUNE_OT_send_message(Operator):
     
     def add_message(self, context, message_text, is_user=False):
         """Add a message to the chat history."""
-        ui_props = context.scene.kitsune_ui
-        
-        # Create new message
-        message = ui_props.messages.add()
-        message.message = message_text
-        message.is_user = is_user
-        message.timestamp = utils.format_timestamp()
-        
-        # Auto-scroll to new message if enabled
-        preferences = context.preferences.addons["kitsune"].preferences
-        if preferences.auto_scroll:
-            ui_props.active_message_index = len(ui_props.messages) - 1
-        
-        # Limit conversation length if configured
-        max_length = preferences.max_conversation_length
-        if max_length > 0 and len(ui_props.messages) > max_length:
-            # Remove oldest messages
-            excess = len(ui_props.messages) - max_length
-            for _ in range(excess):
-                ui_props.messages.remove(0)
-                ui_props.active_message_index = max(0, ui_props.active_message_index - 1)
+        try:
+            ui_props = context.scene.kitsune_ui
+            
+            # Create new message
+            message = ui_props.messages.add()
+            message.message = message_text
+            message.is_user = is_user
+            message.timestamp = utils.format_timestamp()
+            
+            # Auto-scroll to new message if enabled
+            preferences = context.preferences.addons["kitsune"].preferences
+            if preferences.auto_scroll:
+                ui_props.active_message_index = len(ui_props.messages) - 1
+            
+            # Limit conversation length if configured
+            max_length = preferences.max_conversation_length
+            if max_length > 0 and len(ui_props.messages) > max_length:
+                # Remove oldest messages
+                excess = len(ui_props.messages) - max_length
+                for _ in range(excess):
+                    ui_props.messages.remove(0)
+                    ui_props.active_message_index = max(0, ui_props.active_message_index - 1)
+        except Exception as e:
+            utils.log_error(f"Error adding message: {str(e)}")
     
     def handle_response(self, result):
         """Handle the API response."""
-        # This runs in the main thread via timer callback
-        if bpy.context is None:
-            return
+        try:
+            # This runs in the main thread via timer callback
+            if bpy.context is None:
+                return
+                
+            ui_props = bpy.context.scene.kitsune_ui
             
-        ui_props = bpy.context.scene.kitsune_ui
-        
-        # Clear processing flag
-        ui_props.is_processing = False
-        
-        if "error" in result:
-            # Show error as a system message
-            error_message = f"Error: {result['error']}"
-            self.add_message(bpy.context, error_message, is_user=False)
-            utils.log_error(error_message)
-            return
+            # Clear processing flag
+            ui_props.is_processing = False
             
-        if "response" in result:
-            response_text = result["response"]
-            
-            # Add message to chat
-            message = ui_props.messages.add()
-            message.message = response_text
-            message.is_user = False
-            message.timestamp = utils.format_timestamp()
-            
-            # Extract code from response if present
-            extracted_code = format_code_for_execution(response_text)
-            if extracted_code:
-                message.has_code = True
-                message.code = extracted_code
+            if "error" in result:
+                # Show error as a system message
+                error_message = f"Error: {result['error']}"
+                self.add_message(bpy.context, error_message, is_user=False)
+                utils.log_error(error_message)
+                return
+                
+            if "response" in result:
+                response_text = result["response"]
+                
+                # Add message to chat
+                message = ui_props.messages.add()
+                message.message = response_text
+                message.is_user = False
+                message.timestamp = utils.format_timestamp()
+                
+                # Extract code from response if present
+                extracted_code = format_code_for_execution(response_text)
+                if extracted_code:
+                    message.has_code = True
+                    message.code = extracted_code
+        except Exception as e:
+            utils.log_error(f"Error handling response: {str(e)}")
 
 # Clear chat operator
 class KITSUNE_OT_clear_chat(Operator):
@@ -682,12 +707,25 @@ class KITSUNE_OT_clear_chat(Operator):
             return {'CANCELLED'}
     
     def draw(self, context):
-        layout = self.layout
-        layout.label(text="Are you sure you want to clear the conversation history?")
-        layout.label(text="This action cannot be undone.")
+        try:
+            layout = self.layout
+            layout.label(text="Are you sure you want to clear the conversation history?")
+            layout.label(text="This action cannot be undone.")
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
     
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
+        try:
+            return context.window_manager.invoke_props_dialog(self)
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI invoke error: {str(e)}")
+            return {'CANCELLED'}
 
 # Launcher panel
 class KITSUNE_PT_launcher(Panel):
@@ -701,27 +739,33 @@ class KITSUNE_PT_launcher(Panel):
     bl_order = 0  # Ensure it appears at the top
     
     def draw(self, context):
-        layout = self.layout
-        
-        # Get provider info for display
-        preferences = context.preferences.addons["kitsune"].preferences
-        provider_name = preferences.api_provider.capitalize()
-        model_attr = f"{preferences.api_provider}_model"
-        model_name = getattr(preferences, model_attr, "Unknown").split('/')[-1]
-        
-        # Display current provider and model
-        info_box = layout.box()
-        info_box.label(text=f"Using: {provider_name}", icon='WORLD')
-        info_box.label(text=f"Model: {model_name}")
-        
-        # Chat buttons
-        chat_row = layout.row(align=True)
-        chat_row.scale_y = 1.5
-        chat_row.operator("kitsune.chat_in_dialog", text="Dialog Chat", icon='WINDOW')
-        
-        # Easy access to sidebar panel
-        layout.label(text="Detailed features available in the Kitsune panel below")
-        layout.separator()
+        try:
+            layout = self.layout
+            
+            # Get provider info for display
+            preferences = context.preferences.addons["kitsune"].preferences
+            provider_name = preferences.api_provider.capitalize()
+            model_attr = f"{preferences.api_provider}_model"
+            model_name = getattr(preferences, model_attr, "Unknown").split('/')[-1]
+            
+            # Display current provider and model
+            info_box = layout.box()
+            info_box.label(text=f"Using: {provider_name}", icon='WORLD')
+            info_box.label(text=f"Model: {model_name}")
+            
+            # Chat buttons
+            chat_row = layout.row(align=True)
+            chat_row.scale_y = 1.5
+            chat_row.operator("kitsune.chat_in_dialog", text="Dialog Chat", icon='WINDOW')
+            
+            # Easy access to sidebar panel
+            layout.label(text="Detailed features available in the Kitsune panel below")
+            layout.separator()
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
 
 # Classes to register
 classes = (
