@@ -49,42 +49,6 @@ class KitsuneAttachment(PropertyGroup):
         default=0
     )
 
-# Define a property group to store chat sessions
-class KitsuneChatSession(PropertyGroup):
-    """Properties for a chat session."""
-    
-    name: StringProperty(
-        name="Name",
-        description="Name of the chat session",
-        default="New Chat"
-    )
-    
-    is_active: BoolProperty(
-        name="Is Active",
-        description="Whether this chat session is currently active",
-        default=False
-    )
-    
-    # Messages collection
-    messages: CollectionProperty(
-        name="Messages",
-        description="Chat message history",
-        type=lambda: KitsuneChatMessage
-    )
-    
-    # Current message index for UI list
-    active_message_index: IntProperty(
-        name="Active Message Index",
-        default=0
-    )
-    
-    # Scroll position for this chat
-    scroll_position: IntProperty(
-        name="Scroll Position",
-        description="Current scroll position in the chat history",
-        default=0
-    )
-
 # Define a property group to store chat messages
 class KitsuneChatMessage(PropertyGroup):
     """Properties for a single chat message."""
@@ -130,6 +94,42 @@ class KitsuneChatMessage(PropertyGroup):
         name="Has Attachments",
         description="Whether this message has file attachments",
         default=False
+    )
+
+# Define a property group to store chat sessions
+class KitsuneChatSession(PropertyGroup):
+    """Properties for a chat session."""
+    
+    name: StringProperty(
+        name="Name",
+        description="Name of the chat session",
+        default="New Chat"
+    )
+    
+    is_active: BoolProperty(
+        name="Is Active",
+        description="Whether this chat session is currently active",
+        default=False
+    )
+    
+    # Messages collection - Now KitsuneChatMessage is defined before this reference
+    messages: CollectionProperty(
+        name="Messages",
+        description="Chat message history",
+        type=KitsuneChatMessage
+    )
+    
+    # Current message index for UI list
+    active_message_index: IntProperty(
+        name="Active Message Index",
+        default=0
+    )
+    
+    # Scroll position for this chat
+    scroll_position: IntProperty(
+        name="Scroll Position",
+        description="Current scroll position in the chat history",
+        default=0
     )
 
 # Stored UI state for persistence
@@ -1116,8 +1116,8 @@ class KITSUNE_OT_clear_chat(Operator):
 # Classes to register
 classes = (
     KitsuneAttachment,
-    KitsuneChatSession,
     KitsuneChatMessage,
+    KitsuneChatSession,
     KitsuneUIProperties,
     KITSUNE_UL_chat_sessions,
     KITSUNE_PT_chat_panel,
