@@ -16,7 +16,9 @@ from bpy.types import (
 import json
 import time
 from . import utils
-from .api import APIRequestThread, get_provider_instance, (
+from .api import (
+    APIRequestThread, 
+    get_provider_instance, 
     format_code_for_execution,
     create_context_info
 )
@@ -171,212 +173,217 @@ class KITSUNE_PT_chat_panel(Panel):
     
     def draw(self, context):
         try:
-        layout = self.layout
-        ui_props = context.scene.kitsune_ui
-        preferences = context.preferences.addons["kitsune"].preferences
-        
-        # API Settings button
-        settings_row = layout.row(align=True)
-        
-        # Provider info display with icon
-        provider_name = preferences.api_provider.capitalize()
-        model_attr = f"{preferences.api_provider}_model"
-        model_name = getattr(preferences, model_attr, "Unknown").split('/')[-1]
-        
-        icon = 'DISCLOSURE_TRI_DOWN' if ui_props.show_api_settings else 'DISCLOSURE_TRI_RIGHT'
-        settings_row.prop(ui_props, "show_api_settings", text=f"{provider_name} - {model_name}", 
-                           icon=icon, emboss=False)
-        
-        # Quick access buttons
-        buttons_row = layout.row(align=True)
-        buttons_row.operator("kitsune.chat_in_dialog", text="Dialog Chat", icon='WINDOW')
-        buttons_row.operator("kitsune.export_chat", text="Export Chat", icon='EXPORT')
-        
-        # Show API settings if expanded
-        if ui_props.show_api_settings:
-            api_box = layout.box()
+            layout = self.layout
+            ui_props = context.scene.kitsune_ui
+            preferences = context.preferences.addons["kitsune"].preferences
             
-            # Provider selection
-            provider_row = api_box.row()
-            provider_row.label(text="AI Provider:")
-            provider_row.prop(preferences, "api_provider", text="")
+            # API Settings button
+            settings_row = layout.row(align=True)
             
-            # Model selection
-            model_row = api_box.row()
-            model_row.label(text="Model:")
+            # Provider info display with icon
+            provider_name = preferences.api_provider.capitalize()
+            model_attr = f"{preferences.api_provider}_model"
+            model_name = getattr(preferences, model_attr, "Unknown").split('/')[-1]
             
-            if preferences.api_provider == 'anthropic':
-                model_row.prop(preferences, "anthropic_model", text="")
-                api_key_row = api_box.row()
-                api_key_row.label(text="API Key:")
-                api_key_row.prop(preferences, "anthropic_api_key", text="")
+            icon = 'DISCLOSURE_TRI_DOWN' if ui_props.show_api_settings else 'DISCLOSURE_TRI_RIGHT'
+            settings_row.prop(ui_props, "show_api_settings", text=f"{provider_name} - {model_name}", 
+                               icon=icon, emboss=False)
+            
+            # Quick access buttons
+            buttons_row = layout.row(align=True)
+            buttons_row.operator("kitsune.chat_in_dialog", text="Dialog Chat", icon='WINDOW')
+            buttons_row.operator("kitsune.export_chat", text="Export Chat", icon='EXPORT')
+            
+            # Show API settings if expanded
+            if ui_props.show_api_settings:
+                api_box = layout.box()
                 
-            elif preferences.api_provider == 'google':
-                model_row.prop(preferences, "google_model", text="")
-                api_key_row = api_box.row()
-                api_key_row.label(text="API Key:")
-                api_key_row.prop(preferences, "google_api_key", text="")
+                # Provider selection
+                provider_row = api_box.row()
+                provider_row.label(text="AI Provider:")
+                provider_row.prop(preferences, "api_provider", text="")
                 
-            elif preferences.api_provider == 'deepseek':
-                model_row.prop(preferences, "deepseek_model", text="")
-                api_key_row = api_box.row()
-                api_key_row.label(text="API Key:")
-                api_key_row.prop(preferences, "deepseek_api_key", text="")
+                # Model selection
+                model_row = api_box.row()
+                model_row.label(text="Model:")
                 
-            elif preferences.api_provider == 'openai':
-                model_row.prop(preferences, "openai_model", text="")
-                api_key_row = api_box.row()
-                api_key_row.label(text="API Key:")
-                api_key_row.prop(preferences, "openai_api_key", text="")
-            
-            # Save button
-            save_row = api_box.row()
-            save_row.operator("kitsune.validate_api_key", text="Save & Validate", icon='CHECKMARK')
-        
-        # Show message history
-        history_box = layout.box()
-        history_box.label(text="Conversation", icon='OUTLINER_OB_FONT')
-        
-        if not ui_props.messages:
-            history_box.label(text="No messages yet. Type something to begin.")
-        else:
-            # Scrollable message list with Claude-like styling
-            message_col = history_box.column()
-            message_col.scale_y = 0.7
-            
-            # Add some vertical spacing at the top for better appearance
-            message_col.separator(factor=0.5)
-            
-            for idx, msg in enumerate(ui_props.messages):
-                # Alternate colors and alignment for user/AI messages
-                if msg.is_user:
-                    # User message - right aligned with light background
-                    message_box = message_col.box()
-                    message_box.alignment = 'RIGHT'
+                if preferences.api_provider == 'anthropic':
+                    model_row.prop(preferences, "anthropic_model", text="")
+                    api_key_row = api_box.row()
+                    api_key_row.label(text="API Key:")
+                    api_key_row.prop(preferences, "anthropic_api_key", text="")
                     
-                    # User message header
-                    header_row = message_box.row()
-                    header_row.alignment = 'RIGHT'
+                elif preferences.api_provider == 'google':
+                    model_row.prop(preferences, "google_model", text="")
+                    api_key_row = api_box.row()
+                    api_key_row.label(text="API Key:")
+                    api_key_row.prop(preferences, "google_api_key", text="")
                     
-                    # Add timestamp on the left if enabled
-                    if preferences.show_timestamps and msg.timestamp:
-                        header_row.label(text=msg.timestamp, icon='SMALL_CAPS')
+                elif preferences.api_provider == 'deepseek':
+                    model_row.prop(preferences, "deepseek_model", text="")
+                    api_key_row = api_box.row()
+                    api_key_row.label(text="API Key:")
+                    api_key_row.prop(preferences, "deepseek_api_key", text="")
                     
-                    header_row.label(text="You", icon='USER')
-                    
-                    # Message content with right alignment
-                    content_col = message_box.column()
-                    content_col.alignment = 'RIGHT'
-                    content_col.scale_y = 0.7
-                    
-                    for line in msg.message.split('\n'):
-                        if line.strip():
-                            content_col.label(text=line)
-                else:
-                    # AI message - left aligned
-                    message_box = message_col.box()
-                    message_box.alignment = 'LEFT'
-                    
-                    # AI message header
-                    header_row = message_box.row()
-                    header_row.alignment = 'LEFT'
-                    header_row.label(text="Kitsune", icon='BLENDER')
-                    
-                    # Add timestamp on the right if enabled
-                    if preferences.show_timestamps and msg.timestamp:
-                        header_row.label(text=msg.timestamp, icon='SMALL_CAPS')
-                    
-                    # Message content with left alignment
-                    content_col = message_box.column()
-                    content_col.alignment = 'LEFT'
-                    content_col.scale_y = 0.7
-                    
-                    in_code_block = False
-                    code_lines = []
-                    
-                    for line in msg.message.split('\n'):
-                        # Detect start and end of code blocks
-                        if line.strip().startswith('```'):
-                            if in_code_block:
-                                # End of code block, display collected code
-                                in_code_block = False
-                                code_box = content_col.box()
-                                code_box.scale_y = 0.7
-                                for code_line in code_lines:
-                                    code_box.label(text=code_line)
-                                code_lines = []
-                            else:
-                                # Start of code block
-                                in_code_block = True
-                        elif in_code_block:
-                            # Collect code lines
-                            code_lines.append(line)
-                        elif line.strip():
-                            # Regular text line
-                            content_col.label(text=line)
-                    
-                    # Handle any remaining code lines
-                    if code_lines:
-                        code_box = content_col.box()
-                        code_box.scale_y = 0.7
-                        for code_line in code_lines:
-                            code_box.label(text=code_line)
-                    
-                    # If there's code in the AI message, show buttons
-                    if msg.has_code:
-                        button_row = message_box.row(align=True)
-                        button_row.alignment = 'LEFT'
-                        
-                        # Preview code button
-                        preview_op = button_row.operator("kitsune.preview_code", text="Preview", icon='SCRIPT')
-                        preview_op.message_index = idx
-                        
-                        # Copy code button
-                        copy_op = button_row.operator("kitsune.copy_code", text="Copy", icon='COPYDOWN')
-                        copy_op.message_index = idx
+                elif preferences.api_provider == 'openai':
+                    model_row.prop(preferences, "openai_model", text="")
+                    api_key_row = api_box.row()
+                    api_key_row.label(text="API Key:")
+                    api_key_row.prop(preferences, "openai_api_key", text="")
                 
-                # Add separator between messages for better readability
+                # Save button
+                save_row = api_box.row()
+                save_row.operator("kitsune.validate_api_key", text="Save & Validate", icon='CHECKMARK')
+            
+            # Show message history
+            history_box = layout.box()
+            history_box.label(text="Conversation", icon='OUTLINER_OB_FONT')
+            
+            if not ui_props.messages:
+                history_box.label(text="No messages yet. Type something to begin.")
+            else:
+                # Scrollable message list with Claude-like styling
+                message_col = history_box.column()
+                message_col.scale_y = 0.7
+                
+                # Add some vertical spacing at the top for better appearance
                 message_col.separator(factor=0.5)
-        
-        # Code execution UI
-        if ui_props.has_pending_code:
-            code_box = layout.box()
-            code_box.label(text="Generated Code:", icon='SCRIPT')
+                
+                for idx, msg in enumerate(ui_props.messages):
+                    # Alternate colors and alignment for user/AI messages
+                    if msg.is_user:
+                        # User message - right aligned with light background
+                        message_box = message_col.box()
+                        message_box.alignment = 'RIGHT'
+                        
+                        # User message header
+                        header_row = message_box.row()
+                        header_row.alignment = 'RIGHT'
+                        
+                        # Add timestamp on the left if enabled
+                        if preferences.show_timestamps and msg.timestamp:
+                            header_row.label(text=msg.timestamp, icon='SMALL_CAPS')
+                        
+                        header_row.label(text="You", icon='USER')
+                        
+                        # Message content with right alignment
+                        content_col = message_box.column()
+                        content_col.alignment = 'RIGHT'
+                        content_col.scale_y = 0.7
+                        
+                        for line in msg.message.split('\n'):
+                            if line.strip():
+                                content_col.label(text=line)
+                    else:
+                        # AI message - left aligned
+                        message_box = message_col.box()
+                        message_box.alignment = 'LEFT'
+                        
+                        # AI message header
+                        header_row = message_box.row()
+                        header_row.alignment = 'LEFT'
+                        header_row.label(text="Kitsune", icon='BLENDER')
+                        
+                        # Add timestamp on the right if enabled
+                        if preferences.show_timestamps and msg.timestamp:
+                            header_row.label(text=msg.timestamp, icon='SMALL_CAPS')
+                        
+                        # Message content with left alignment
+                        content_col = message_box.column()
+                        content_col.alignment = 'LEFT'
+                        content_col.scale_y = 0.7
+                        
+                        in_code_block = False
+                        code_lines = []
+                        
+                        for line in msg.message.split('\n'):
+                            # Detect start and end of code blocks
+                            if line.strip().startswith('```'):
+                                if in_code_block:
+                                    # End of code block, display collected code
+                                    in_code_block = False
+                                    code_box = content_col.box()
+                                    code_box.scale_y = 0.7
+                                    for code_line in code_lines:
+                                        code_box.label(text=code_line)
+                                    code_lines = []
+                                else:
+                                    # Start of code block
+                                    in_code_block = True
+                            elif in_code_block:
+                                # Collect code lines
+                                code_lines.append(line)
+                            elif line.strip():
+                                # Regular text line
+                                content_col.label(text=line)
+                        
+                        # Handle any remaining code lines
+                        if code_lines:
+                            code_box = content_col.box()
+                            code_box.scale_y = 0.7
+                            for code_line in code_lines:
+                                code_box.label(text=code_line)
+                        
+                        # If there's code in the AI message, show buttons
+                        if msg.has_code:
+                            button_row = message_box.row(align=True)
+                            button_row.alignment = 'LEFT'
+                            
+                            # Preview code button
+                            preview_op = button_row.operator("kitsune.preview_code", text="Preview", icon='SCRIPT')
+                            preview_op.message_index = idx
+                            
+                            # Copy code button
+                            copy_op = button_row.operator("kitsune.copy_code", text="Copy", icon='COPYDOWN')
+                            copy_op.message_index = idx
+                    
+                    # Add separator between messages for better readability
+                    message_col.separator(factor=0.5)
             
-            # Display code with scrolling
-            code_col = code_box.column()
-            code_col.scale_y = 0.7
+            # Code execution UI
+            if ui_props.has_pending_code:
+                code_box = layout.box()
+                code_box.label(text="Generated Code:", icon='SCRIPT')
+                
+                # Display code with scrolling
+                code_col = code_box.column()
+                code_col.scale_y = 0.7
+                
+                # Split code into lines for display
+                for line in ui_props.pending_code.split('\n'):
+                    code_col.label(text=line)
+                
+                # Action buttons
+                button_row = code_box.row(align=True)
+                button_row.operator("kitsune.execute_code", text="Execute Code", icon='PLAY')
+                button_row.operator("kitsune.cancel_code", text="Cancel", icon='X')
             
-            # Split code into lines for display
-            for line in ui_props.pending_code.split('\n'):
-                code_col.label(text=line)
+            # Input area with Claude-like styling
+            input_container = layout.box()
             
-            # Action buttons
-            button_row = code_box.row(align=True)
-            button_row.operator("kitsune.execute_code", text="Execute Code", icon='PLAY')
-            button_row.operator("kitsune.cancel_code", text="Cancel", icon='X')
-        
-        # Input area with Claude-like styling
-        input_container = layout.box()
-        
-        # Display processing indicator
-        if ui_props.is_processing:
-            input_container.label(text="Processing request...", icon='SORTTIME')
-        
-        # Chat input field
-        input_row = input_container.row(align=True)
-        input_row.prop(ui_props, "chat_input", text="")
-        
-        # Send button
-        send_button = input_row.operator("kitsune.send_message", text="", icon='EXPORT')
-        
-        # Clear conversation button
-        if ui_props.messages:
-            clear_row = input_container.row()
-            clear_row.operator("kitsune.clear_chat", text="Clear Conversation", icon='TRASH')
-        
-        # Disable input while processing
-        input_container.enabled = not ui_props.is_processing
+            # Display processing indicator
+            if ui_props.is_processing:
+                input_container.label(text="Processing request...", icon='SORTTIME')
+            
+            # Chat input field
+            input_row = input_container.row(align=True)
+            input_row.prop(ui_props, "chat_input", text="")
+            
+            # Send button
+            send_button = input_row.operator("kitsune.send_message", text="", icon='EXPORT')
+            
+            # Clear conversation button
+            if ui_props.messages:
+                clear_row = input_container.row()
+                clear_row.operator("kitsune.clear_chat", text="Clear Conversation", icon='TRASH')
+            
+            # Disable input while processing
+            input_container.enabled = not ui_props.is_processing
+        except Exception as e:
+            layout = self.layout
+            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            from . import utils
+            utils.log_error(f"UI draw error: {str(e)}")
 
 # Validate API key operator
 class KITSUNE_OT_validate_api_key(Operator):
@@ -386,23 +393,24 @@ class KITSUNE_OT_validate_api_key(Operator):
     bl_label = "Validate API Key"
     bl_description = "Validate the API key for the selected provider"
     
-            except Exception as e:
+    def execute(self, context):
+        try:
+            preferences = context.preferences.addons["kitsune"].preferences
+            
+            is_valid, message = preferences.validate_provider_api_key()
+            
+            if is_valid:
+                self.report({'INFO'}, f"API key valid: {message}")
+            else:
+                self.report({'ERROR'}, f"API key invalid: {message}")
+            
+            return {'FINISHED'}
+        except Exception as e:
             layout = self.layout
             layout.label(text=f"Error: {str(e)}", icon='ERROR')
             from . import utils
-            utils.log_error(f"UI draw error: {str(e)}")
-
-def execute(self, context):
-        preferences = context.preferences.addons["kitsune"].preferences
-        
-        is_valid, message = preferences.validate_provider_api_key()
-        
-        if is_valid:
-            self.report({'INFO'}, f"API key valid: {message}")
-        else:
-            self.report({'ERROR'}, f"API key invalid: {message}")
-        
-        return {'FINISHED'}
+            utils.log_error(f"UI execute error: {str(e)}")
+            return {'CANCELLED'}
 
 # Preview code operator
 class KITSUNE_OT_preview_code(Operator):
@@ -418,30 +426,31 @@ class KITSUNE_OT_preview_code(Operator):
         default=0
     )
     
-            except Exception as e:
+    def execute(self, context):
+        try:
+            ui_props = context.scene.kitsune_ui
+            
+            # Validate message index
+            if self.message_index < 0 or self.message_index >= len(ui_props.messages):
+                self.report({'ERROR'}, "Invalid message index")
+                return {'CANCELLED'}
+            
+            # Get the message and set the pending code
+            message = ui_props.messages[self.message_index]
+            if not message.has_code or not message.code:
+                self.report({'WARNING'}, "No executable code found in the message")
+                return {'CANCELLED'}
+            
+            ui_props.pending_code = message.code
+            ui_props.has_pending_code = True
+            
+            return {'FINISHED'}
+        except Exception as e:
             layout = self.layout
             layout.label(text=f"Error: {str(e)}", icon='ERROR')
             from . import utils
-            utils.log_error(f"UI draw error: {str(e)}")
-
-def execute(self, context):
-        ui_props = context.scene.kitsune_ui
-        
-        # Validate message index
-        if self.message_index < 0 or self.message_index >= len(ui_props.messages):
-            self.report({'ERROR'}, "Invalid message index")
+            utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
-        
-        # Get the message and set the pending code
-        message = ui_props.messages[self.message_index]
-        if not message.has_code or not message.code:
-            self.report({'WARNING'}, "No executable code found in the message")
-            return {'CANCELLED'}
-        
-        ui_props.pending_code = message.code
-        ui_props.has_pending_code = True
-        
-        return {'FINISHED'}
 
 # Execute code operator
 class KITSUNE_OT_execute_code(Operator):
@@ -451,31 +460,32 @@ class KITSUNE_OT_execute_code(Operator):
     bl_label = "Execute Code"
     bl_description = "Execute the generated code"
     
-            except Exception as e:
+    def execute(self, context):
+        try:
+            ui_props = context.scene.kitsune_ui
+            
+            if not ui_props.has_pending_code or not ui_props.pending_code:
+                self.report({'ERROR'}, "No code to execute")
+                return {'CANCELLED'}
+            
+            # Execute the code
+            code = ui_props.pending_code
+            success, result = utils.safe_execute_code(code)
+            
+            if success:
+                self.report({'INFO'}, "Code executed successfully")
+                ui_props.has_pending_code = False
+                ui_props.pending_code = ""
+            else:
+                self.report({'ERROR'}, f"Error executing code: {result}")
+            
+            return {'FINISHED'}
+        except Exception as e:
             layout = self.layout
             layout.label(text=f"Error: {str(e)}", icon='ERROR')
             from . import utils
-            utils.log_error(f"UI draw error: {str(e)}")
-
-def execute(self, context):
-        ui_props = context.scene.kitsune_ui
-        
-        if not ui_props.has_pending_code or not ui_props.pending_code:
-            self.report({'ERROR'}, "No code to execute")
+            utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
-        
-        # Execute the code
-        code = ui_props.pending_code
-        success, result = utils.safe_execute_code(code)
-        
-        if success:
-            self.report({'INFO'}, "Code executed successfully")
-            ui_props.has_pending_code = False
-            ui_props.pending_code = ""
-        else:
-            self.report({'ERROR'}, f"Error executing code: {result}")
-        
-        return {'FINISHED'}
     
     def draw(self, context):
         layout = self.layout
@@ -502,18 +512,19 @@ class KITSUNE_OT_cancel_code(Operator):
     bl_label = "Cancel Code Execution"
     bl_description = "Cancel the pending code execution"
     
-            except Exception as e:
+    def execute(self, context):
+        try:
+            ui_props = context.scene.kitsune_ui
+            ui_props.has_pending_code = False
+            ui_props.pending_code = ""
+            self.report({'INFO'}, "Code execution cancelled")
+            return {'FINISHED'}
+        except Exception as e:
             layout = self.layout
             layout.label(text=f"Error: {str(e)}", icon='ERROR')
             from . import utils
-            utils.log_error(f"UI draw error: {str(e)}")
-
-def execute(self, context):
-        ui_props = context.scene.kitsune_ui
-        ui_props.has_pending_code = False
-        ui_props.pending_code = ""
-        self.report({'INFO'}, "Code execution cancelled")
-        return {'FINISHED'}
+            utils.log_error(f"UI execute error: {str(e)}")
+            return {'CANCELLED'}
 
 # Send message operator
 class KITSUNE_OT_send_message(Operator):
@@ -530,58 +541,59 @@ class KITSUNE_OT_send_message(Operator):
         default=""
     )
     
-            except Exception as e:
+    def execute(self, context):
+        try:
+            ui_props = context.scene.kitsune_ui
+            
+            # Get message from input field or parameter
+            message = self.message if self.message else ui_props.chat_input.strip()
+            
+            if not message:
+                self.report({'WARNING'}, "Please enter a message")
+                return {'CANCELLED'}
+            
+            # Check if AI provider and key are set
+            preferences = context.preferences.addons["kitsune"].preferences
+            provider = get_active_provider()
+            
+            if not provider:
+                self.report({'ERROR'}, f"Failed to initialize provider: {preferences.api_provider}")
+                return {'CANCELLED'}
+            
+            # Validate API key
+            is_valid, validation_message = preferences.validate_provider_api_key()
+            if not is_valid:
+                self.report({'ERROR'}, validation_message)
+                return {'CANCELLED'}
+            
+            # Add user message to chat
+            self.add_message(context, message, is_user=True)
+            
+            # Clear input field
+            ui_props.chat_input = ""
+            
+            # Set processing flag
+            ui_props.is_processing = True
+            
+            # Get context information from Blender
+            context_info = create_context_info()
+            
+            # Start a thread to send the request
+            thread = APIRequestThread(
+                provider=provider,
+                prompt=message,
+                context_info=context_info,
+                callback=self.handle_response
+            )
+            thread.start()
+            
+            return {'FINISHED'}
+        except Exception as e:
             layout = self.layout
             layout.label(text=f"Error: {str(e)}", icon='ERROR')
             from . import utils
-            utils.log_error(f"UI draw error: {str(e)}")
-
-def execute(self, context):
-        ui_props = context.scene.kitsune_ui
-        
-        # Get message from input field or parameter
-        message = self.message if self.message else ui_props.chat_input.strip()
-        
-        if not message:
-            self.report({'WARNING'}, "Please enter a message")
+            utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
-        
-        # Check if AI provider and key are set
-        preferences = context.preferences.addons["kitsune"].preferences
-        provider = get_active_provider()
-        
-        if not provider:
-            self.report({'ERROR'}, f"Failed to initialize provider: {preferences.api_provider}")
-            return {'CANCELLED'}
-        
-        # Validate API key
-        is_valid, validation_message = preferences.validate_provider_api_key()
-        if not is_valid:
-            self.report({'ERROR'}, validation_message)
-            return {'CANCELLED'}
-        
-        # Add user message to chat
-        self.add_message(context, message, is_user=True)
-        
-        # Clear input field
-        ui_props.chat_input = ""
-        
-        # Set processing flag
-        ui_props.is_processing = True
-        
-        # Get context information from Blender
-        context_info = create_context_info()
-        
-        # Start a thread to send the request
-        thread = APIRequestThread(
-            provider=provider,
-            prompt=message,
-            context_info=context_info,
-            callback=self.handle_response
-        )
-        thread.start()
-        
-        return {'FINISHED'}
     
     def add_message(self, context, message_text, is_user=False):
         """Add a message to the chat history."""
@@ -648,25 +660,26 @@ class KITSUNE_OT_clear_chat(Operator):
     bl_label = "Clear Chat"
     bl_description = "Clear the conversation history"
     
-            except Exception as e:
+    def execute(self, context):
+        try:
+            ui_props = context.scene.kitsune_ui
+            
+            # Clear all messages
+            ui_props.messages.clear()
+            ui_props.active_message_index = 0
+            
+            # Clear any pending code
+            ui_props.has_pending_code = False
+            ui_props.pending_code = ""
+            
+            self.report({'INFO'}, "Conversation cleared")
+            return {'FINISHED'}
+        except Exception as e:
             layout = self.layout
             layout.label(text=f"Error: {str(e)}", icon='ERROR')
             from . import utils
-            utils.log_error(f"UI draw error: {str(e)}")
-
-def execute(self, context):
-        ui_props = context.scene.kitsune_ui
-        
-        # Clear all messages
-        ui_props.messages.clear()
-        ui_props.active_message_index = 0
-        
-        # Clear any pending code
-        ui_props.has_pending_code = False
-        ui_props.pending_code = ""
-        
-        self.report({'INFO'}, "Conversation cleared")
-        return {'FINISHED'}
+            utils.log_error(f"UI execute error: {str(e)}")
+            return {'CANCELLED'}
     
     def draw(self, context):
         layout = self.layout
