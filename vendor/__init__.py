@@ -1,24 +1,19 @@
-# Vendor packages for Kitsune
-# This directory contains third-party dependencies
+# Vendor package for Kitsune addon
+#
+# This package contains third-party dependencies to ensure the addon
+# works without requiring external installations.
+#
+# Current included packages:
+# - requests: HTTP library for making API calls
 
-# Ensure the vendored packages are properly accessible
 import sys
 import os
-import importlib
 
-# Add this directory to path to ensure proper package import
-vendor_dir = os.path.dirname(__file__)
-if vendor_dir not in sys.path:
-    sys.path.insert(0, vendor_dir)
+# Get the current directory
+__path__ = [os.path.dirname(__file__)]
 
-# Import the actual requests package
-try:
-    import requests
-    # 明示的にサブモジュールをインポート
-    from requests import sessions
-    from requests import adapters
-    from requests import auth
-    from requests import hooks
-    print("[KITSUNE INFO] Successfully loaded requests module and submodules.")
-except ImportError as e:
-    print(f"[KITSUNE ERROR] Failed to import requests module: {e}")
+# Add all subdirectories to the path to ensure imports work properly
+for item in os.listdir(__path__[0]):
+    item_path = os.path.join(__path__[0], item)
+    if os.path.isdir(item_path) and item_path not in sys.path:
+        sys.path.insert(0, item_path)

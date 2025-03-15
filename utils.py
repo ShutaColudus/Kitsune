@@ -6,7 +6,7 @@ import threading
 import traceback
 from datetime import datetime
 
-# Debug mode flag - 開発中はデバッグモードを有効にする
+# Debug mode flag - Enable debug mode during development
 DEBUG_MODE = True
 
 def set_debug_mode(enabled):
@@ -47,7 +47,7 @@ def log_error(message):
         message (str): The message to log
     """
     print(f"[KITSUNE ERROR] {message}")
-    # エラーが発生した場合、モーダルでメッセージを表示
+    # Display a modal message when an error occurs
     try:
         show_message_box(message, "Kitsune Error", 'ERROR')
     except Exception as e:
@@ -207,7 +207,7 @@ def check_dependencies():
     try:
         import requests
         try:
-            # サブモジュールも確認
+            # Also check submodules
             import requests.sessions
             import requests.adapters
             log_debug(f"Found requests version: {requests.__version__ if hasattr(requests, '__version__') else 'unknown'} with submodules")
@@ -220,7 +220,7 @@ def check_dependencies():
     
     return len(missing) == 0, missing
 
-# 修正: より確実なモーダルダイアログ表示方法に変更
+# Improved method for showing modal dialogs
 def show_message_box(message, title="Message", icon='INFO'):
     """
     Show a message box to the user.
@@ -230,7 +230,7 @@ def show_message_box(message, title="Message", icon='INFO'):
         title (str, optional): Title of the message box. Defaults to "Message".
         icon (str, optional): Icon to display. Defaults to 'INFO'.
     """
-    # MessageBoxオペレータークラスを定義
+    # Define MessageBox operator class
     class KITSUNE_OT_message_box(bpy.types.Operator):
         bl_idname = "kitsune.message_box"
         bl_label = title
@@ -247,19 +247,19 @@ def show_message_box(message, title="Message", icon='INFO'):
         
         def draw(self, context):
             layout = self.layout
-            # 改行ごとに分割して表示
+            # Display each line separately
             for line in self.message.split('\n'):
                 layout.label(text=line)
 
-    # 一時的にオペレーターを登録
+    # Temporarily register the operator
     try:
         bpy.utils.register_class(KITSUNE_OT_message_box)
-        # モーダルダイアログを表示
+        # Show the modal dialog
         bpy.ops.kitsune.message_box('INVOKE_DEFAULT')
-        # 登録解除
+        # Unregister the operator
         bpy.utils.unregister_class(KITSUNE_OT_message_box)
     except Exception as e:
-        # 登録に失敗した場合は、フォールバックとしてpopup_menuを使用
+        # If registration fails, use popup_menu as a fallback
         print(f"[KITSUNE ERROR] Failed to show modal dialog: {str(e)}")
         
         def draw(self, context):
@@ -278,10 +278,10 @@ def cleanup_unused_files():
         tuple: (success, message)
     """
     try:
-        # この関数に削除対象のファイルを追加
+        # Add files to be deleted in this function
         addon_dir = os.path.dirname(__file__)
         
-        # 削除対象のファイルパターン
+        # File patterns to remove
         patterns_to_remove = [
             "*.pyc",
             "__pycache__",
@@ -330,18 +330,18 @@ def check_ui_resources():
         bool: True if all resources are available, False otherwise
     """
     try:
-        # UI機能の基本的なチェック
+        # Basic check of UI functionality
         log_debug("Checking UI resources...")
         
-        # Blenderのウィンドウマネージャーが利用可能か確認
+        # Check if Blender's window manager is available
         if not hasattr(bpy, "context") or not hasattr(bpy.context, "window_manager"):
             log_error("Window manager not available")
             return False
         
-        # モーダルダイアログをサポートしているか確認
+        # Check if modal dialogs are supported
         test_operator_registered = False
         
-        # テスト用オペレーター
+        # Test operator
         class KITSUNE_OT_test_modal(bpy.types.Operator):
             bl_idname = "kitsune.test_modal"
             bl_label = "Test Modal"
@@ -357,11 +357,11 @@ def check_ui_resources():
                 self.layout.label(text="Modal test")
         
         try:
-            # テスト用オペレーターを一時的に登録
+            # Temporarily register the test operator
             bpy.utils.register_class(KITSUNE_OT_test_modal)
             test_operator_registered = True
             
-            # すぐに登録解除
+            # Immediately unregister
             bpy.utils.unregister_class(KITSUNE_OT_test_modal)
             log_debug("Modal dialog support confirmed")
             return True
@@ -369,7 +369,7 @@ def check_ui_resources():
             log_error(f"Failed to register test modal operator: {str(e)}")
             return False
         finally:
-            # 万が一登録されたままなら登録解除
+            # Ensure the operator is unregistered in case it's still registered
             if test_operator_registered:
                 try:
                     bpy.utils.unregister_class(KITSUNE_OT_test_modal)

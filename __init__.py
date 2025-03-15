@@ -43,7 +43,7 @@ def setup_vendor_packages():
         from . import vendor
         utils.log_debug("Vendor package initialized")
         
-        # 明示的にrequestsを再ロード
+        # Explicitly reload requests
         if 'requests' in sys.modules:
             importlib.reload(sys.modules['requests'])
             utils.log_debug("Requests module reloaded")
@@ -51,7 +51,7 @@ def setup_vendor_packages():
         # Try to import actual requests package
         try:
             import requests
-            # サブモジュールの明示的なインポート
+            # Explicit import of submodules
             import requests.adapters
             import requests.auth
             import requests.sessions
@@ -77,18 +77,18 @@ def check_ui_capabilities():
     if ui_check:
         utils.log_info("UI resources check passed")
     else:
-        utils.log_error("UI resources check failed - モーダルダイアログが表示されない可能性があります")
+        utils.log_error("UI resources check failed - Modal dialogs may not display properly")
 
-# 修正: 起動時メッセージ表示用のオペレーター
+# Operator for displaying startup messages
 class KITSUNE_OT_startup_message(bpy.types.Operator):
     """Show startup message."""
     
     bl_idname = "kitsune.startup_message"
-    bl_label = "Kitsune起動完了"
+    bl_label = "Kitsune Startup Complete"
     bl_options = {'REGISTER', 'INTERNAL'}
     
     message: bpy.props.StringProperty(
-        default="Kitsuneアドオンが正常に登録されました。\nサイドバーの'Kitsune'タブからアクセスできます。"
+        default="Kitsune addon has been successfully registered.\nYou can access it from the 'Kitsune' tab in the sidebar."
     )
     
     def execute(self, context):
@@ -115,16 +115,16 @@ def register():
         utils.log_error(message)
         # We'll still register, but warning is logged
     
-    # クリーンアップの実行
+    # Execute cleanup
     cleanup_on_startup()
     
     # Setup vendor packages
     setup_vendor_packages()
     
-    # UIリソースのチェック
+    # Check UI resources
     check_ui_capabilities()
     
-    # 起動メッセージ表示用のオペレーターを登録
+    # Register startup message operator
     bpy.utils.register_class(KITSUNE_OT_startup_message)
     
     # Register preferences 
@@ -136,20 +136,20 @@ def register():
     # Register UI components
     ui.register()
     
-    # 登録完了メッセージを表示
+    # Display registration complete message
     utils.log_info("Kitsune addon registered successfully")
     
-    # インストール確認メッセージをモーダルで表示
+    # Show installation confirmation message in modal dialog
     def show_startup_message():
         bpy.ops.kitsune.startup_message('INVOKE_DEFAULT')
-        return None  # タイマーを一度だけ実行
+        return None  # Run timer only once
     
-    # 少し遅延させてメッセージを表示（Blenderの起動完了後に表示）
+    # Add a slight delay to show the message (after Blender startup is complete)
     bpy.app.timers.register(show_startup_message, first_interval=1.0)
 
 def unregister():
     """Unregister the addon."""
-    # タイマーの削除
+    # Remove timers
     if hasattr(bpy.app, "timers"):
         for timer in list(bpy.app.timers):
             if 'show_startup_message' in str(timer):
@@ -164,7 +164,7 @@ def unregister():
     # Unregister preferences
     bpy.utils.unregister_class(preferences.KitsuneAddonPreferences)
     
-    # 起動メッセージ表示用のオペレーターを登録解除
+    # Unregister startup message operator
     try:
         bpy.utils.unregister_class(KITSUNE_OT_startup_message)
     except:

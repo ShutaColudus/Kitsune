@@ -460,11 +460,11 @@ class KITSUNE_OT_execute_code(Operator):
     
     def draw(self, context):
         layout = self.layout
-        layout.label(text="実行しますか？")
-        # コードプレビュー
+        layout.label(text="Execute code?")
+        # Code preview
         code_box = layout.box()
-        code_box.label(text="コード:")
-        for line in context.scene.kitsune_ui.pending_code.split('\n')[:10]:  # 最初の10行のみ表示
+        code_box.label(text="Code:")
+        for line in context.scene.kitsune_ui.pending_code.split('\n')[:10]:  # Display only first 10 lines
             code_box.label(text=line)
         if len(context.scene.kitsune_ui.pending_code.split('\n')) > 10:
             code_box.label(text="...")
@@ -498,7 +498,7 @@ class KITSUNE_OT_send_message(Operator):
     bl_label = "Send Message"
     bl_description = "Send your message to Kitsune"
     
-    # 修正: メッセージパラメータを追加してダイアログからの送信にも対応
+    # Added message parameter to support sending from dialog
     message: StringProperty(
         name="Message",
         description="Message to send",
@@ -633,8 +633,8 @@ class KITSUNE_OT_clear_chat(Operator):
     
     def draw(self, context):
         layout = self.layout
-        layout.label(text="会話履歴を消去しますか？")
-        layout.label(text="この操作は取り消せません。")
+        layout.label(text="Are you sure you want to clear the conversation history?")
+        layout.label(text="This action cannot be undone.")
     
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)

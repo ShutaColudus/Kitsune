@@ -39,9 +39,9 @@ class KITSUNE_OT_chat_in_dialog(Operator):
     )
     
     def invoke(self, context, event):
-        # 修正: ダイアログサイズの指定方法を変更
+        # Fix: Modified the dialog size specification method
         wm = context.window_manager
-        # pixelsではなく、UIユニットで指定（およそ20ピクセルが1ユニット）
+        # Specified in UI units instead of pixels (approximately 20 pixels = 1 unit)
         width_units = self.width // 20
         return wm.invoke_props_dialog(self, width=width_units)
     
@@ -157,7 +157,7 @@ class KITSUNE_OT_send_from_dialog(Operator):
     bl_description = "Send your message to Kitsune from the dialog"
     
     def execute(self, context):
-        # 修正: ダイアログからメッセージを取得して送信する方法を改善
+        # Fix: Improved method to retrieve and send messages from the dialog
         for window in context.window_manager.windows:
             for area in window.screen.areas:
                 for region in area.regions:
