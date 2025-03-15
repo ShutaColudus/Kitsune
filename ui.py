@@ -440,7 +440,7 @@ class KITSUNE_PT_chat_panel(bpy.types.Panel):
             # Placeholder text
             if not kitsune_ui.input_text.strip():
                 placeholder_text = "Type your message..."
-                input_box.label(text=placeholder_text, icon='GHOST')
+                input_box.label(text=placeholder_text, icon='GHOST_ENABLED')
         
         # Settings mode UI
         elif kitsune_ui.view_mode == 'SETTINGS':
