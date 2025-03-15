@@ -848,7 +848,10 @@ class KITSUNE_OT_send_message(bpy.types.Operator):
                                 ai_message.content = f"Error occurred: {response['error']}"
                                 utils.log_error(f"API response error: {response['error']}")
                             else:
-                                ai_message.content = response.get("text", "Empty response")
+                                # 修正: responseからテキストを取得する方法を変更
+                                # response.get("text", "Empty response") だと表示されない
+                                ai_message.content = response.get("response", response.get("text", "Empty response"))
+                                utils.log_debug(f"Response content: {ai_message.content[:100]}...")
                                 
                                 # Extract code if present
                                 from .api import format_code_for_execution
