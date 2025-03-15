@@ -58,17 +58,25 @@ class KITSUNE_OT_chat_in_dialog(Operator):
         header = layout.box()
         header.label(text=f"Kitsune AI Assistant ({provider_name} - {model_name})", icon='BLENDER')
         
+        # Get active session and its messages
+        active_session_idx = ui_props.active_session_index
+        if active_session_idx >= len(ui_props.chat_sessions):
+            active_session_idx = 0
+        
+        active_session = ui_props.chat_sessions[active_session_idx] if ui_props.chat_sessions else None
+        messages = active_session.messages if active_session and hasattr(active_session, "messages") and len(active_session.messages) > 0 else ui_props.messages
+        
         # Conversation history - show last 10 messages at most
         history_box = layout.box()
         history_col = history_box.column()
         history_col.scale_y = 0.7
         
-        if not ui_props.messages:
+        if not messages:
             history_col.label(text="No messages yet. Type something to begin.")
         else:
             # Only show last 10 messages to keep the dialog manageable
-            start_idx = max(0, len(ui_props.messages) - 10)
-            for msg in ui_props.messages[start_idx:]:
+            start_idx = max(0, len(messages) - 10)
+            for msg in messages[start_idx:]:
                 msg_box = history_col.box()
                 
                 # Message header
@@ -126,7 +134,13 @@ class KITSUNE_OT_chat_in_dialog(Operator):
                 if not msg.is_user and msg.has_code:
                     button_row = msg_box.row()
                     op = button_row.operator("kitsune.preview_code", text="Preview Code", icon='SCRIPT')
-                    op.message_index = ui_props.messages.find(msg)
+                    op.message_index = messages.find(msg)
+                
+                # Show attachments if any
+                if hasattr(msg, "has_attachments") and msg.has_attachments and hasattr(msg, "attachments"):
+                    for attachment in msg.attachments:
+                        attach_row = msg_box.row()
+                        attach_row.label(text=attachment.name, icon='FILE')
         
         # Processing indicator
         if ui_props.is_processing:
@@ -194,13 +208,17 @@ class KITSUNE_OT_copy_code(Operator):
     def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
+        # Get active session and its messages
+        active_session = ui_props.chat_sessions[ui_props.active_session_index]
+        messages = active_session.messages if hasattr(active_session, "messages") and len(active_session.messages) > 0 else ui_props.messages
+        
         # Validate message index
-        if self.message_index < 0 or self.message_index >= len(ui_props.messages):
+        if self.message_index < 0 or self.message_index >= len(messages):
             self.report({'ERROR'}, "Invalid message index")
             return {'CANCELLED'}
         
         # Get the message
-        message = ui_props.messages[self.message_index]
+        message = messages[self.message_index]
         if not message.has_code or not message.code:
             self.report({'WARNING'}, "No executable code found in the message")
             return {'CANCELLED'}
@@ -228,7 +246,11 @@ class KITSUNE_OT_export_chat(Operator):
     def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
-        if not ui_props.messages:
+        # Get active session and its messages
+        active_session = ui_props.chat_sessions[ui_props.active_session_index]
+        messages = active_session.messages if hasattr(active_session, "messages") and len(active_session.messages) > 0 else ui_props.messages
+        
+        if not messages:
             self.report({'WARNING'}, "No messages to export")
             return {'CANCELLED'}
         
@@ -237,7 +259,7 @@ class KITSUNE_OT_export_chat(Operator):
                 f.write("# Kitsune Conversation Export\n")
                 f.write(f"# Date: {utils.format_timestamp()}\n\n")
                 
-                for msg in ui_props.messages:
+                for msg in messages:
                     if msg.is_user:
                         f.write(f"## You ({msg.timestamp}):\n")
                     else:
@@ -248,6 +270,13 @@ class KITSUNE_OT_export_chat(Operator):
                     if msg.has_code:
                         f.write("### Generated Code:\n")
                         f.write(f"```python\n{msg.code}\n```\n\n")
+                    
+                    # Export attachments if any
+                    if hasattr(msg, "has_attachments") and msg.has_attachments and hasattr(msg, "attachments"):
+                        f.write("### Attachments:\n")
+                        for attachment in msg.attachments:
+                            f.write(f"- {attachment.name} ({attachment.filepath})\n")
+                        f.write("\n")
             
             self.report({'INFO'}, f"Conversation exported to {self.filepath}")
             return {'FINISHED'}
@@ -259,12 +288,43 @@ class KITSUNE_OT_export_chat(Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
+# Rename chat session operator
+class KITSUNE_OT_rename_chat(Operator):
+    """Rename a chat session."""
+    
+    bl_idname = "kitsune.rename_chat"
+    bl_label = "Rename Chat"
+    bl_description = "Rename the current chat session"
+    
+    new_name: StringProperty(
+        name="Name",
+        description="New name for the chat session",
+        default="New Chat"
+    )
+    
+    def execute(self, context):
+        ui_props = context.scene.kitsune_ui
+        active_session = ui_props.chat_sessions[ui_props.active_session_index]
+        active_session.name = self.new_name
+        return {'FINISHED'}
+    
+    def invoke(self, context, event):
+        ui_props = context.scene.kitsune_ui
+        active_session = ui_props.chat_sessions[ui_props.active_session_index]
+        self.new_name = active_session.name
+        return context.window_manager.invoke_props_dialog(self)
+    
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "new_name")
+
 # List of classes to register
 classes = (
     KITSUNE_OT_chat_in_dialog,
     KITSUNE_OT_send_from_dialog,
     KITSUNE_OT_copy_code,
-    KITSUNE_OT_export_chat
+    KITSUNE_OT_export_chat,
+    KITSUNE_OT_rename_chat
 )
 
 def register():
