@@ -184,7 +184,7 @@ class KITSUNE_PT_chat_panel(Panel):
         
         icon = 'DISCLOSURE_TRI_DOWN' if ui_props.show_api_settings else 'DISCLOSURE_TRI_RIGHT'
         settings_row.prop(ui_props, "show_api_settings", text=f"{provider_name} - {model_name}", 
-                          icon=icon, emboss=False)
+                           icon=icon, emboss=False)
         
         # Quick access buttons
         buttons_row = layout.row(align=True)
@@ -498,11 +498,18 @@ class KITSUNE_OT_send_message(Operator):
     bl_label = "Send Message"
     bl_description = "Send your message to Kitsune"
     
+    # 修正: メッセージパラメータを追加してダイアログからの送信にも対応
+    message: StringProperty(
+        name="Message",
+        description="Message to send",
+        default=""
+    )
+    
     def execute(self, context):
         ui_props = context.scene.kitsune_ui
         
-        # Get message from input field
-        message = ui_props.chat_input.strip()
+        # Get message from input field or parameter
+        message = self.message if self.message else ui_props.chat_input.strip()
         
         if not message:
             self.report({'WARNING'}, "Please enter a message")

@@ -220,6 +220,7 @@ def check_dependencies():
     
     return len(missing) == 0, missing
 
+# 修正: より確実なモーダルダイアログ表示方法に変更
 def show_message_box(message, title="Message", icon='INFO'):
     """
     Show a message box to the user.
@@ -229,10 +230,45 @@ def show_message_box(message, title="Message", icon='INFO'):
         title (str, optional): Title of the message box. Defaults to "Message".
         icon (str, optional): Icon to display. Defaults to 'INFO'.
     """
-    def draw(self, context):
-        self.layout.label(text=message)
-    
-    bpy.context.window_manager.popup_menu(draw, title=title, icon=icon)
+    # MessageBoxオペレータークラスを定義
+    class KITSUNE_OT_message_box(bpy.types.Operator):
+        bl_idname = "kitsune.message_box"
+        bl_label = title
+        bl_options = {'REGISTER', 'INTERNAL'}
+        
+        message: bpy.props.StringProperty(default=message)
+        icon: bpy.props.StringProperty(default=icon)
+        
+        def execute(self, context):
+            return {'FINISHED'}
+        
+        def invoke(self, context, event):
+            return context.window_manager.invoke_props_dialog(self, width=400)
+        
+        def draw(self, context):
+            layout = self.layout
+            # 改行ごとに分割して表示
+            for line in self.message.split('\n'):
+                layout.label(text=line)
+
+    # 一時的にオペレーターを登録
+    try:
+        bpy.utils.register_class(KITSUNE_OT_message_box)
+        # モーダルダイアログを表示
+        bpy.ops.kitsune.message_box('INVOKE_DEFAULT')
+        # 登録解除
+        bpy.utils.unregister_class(KITSUNE_OT_message_box)
+    except Exception as e:
+        # 登録に失敗した場合は、フォールバックとしてpopup_menuを使用
+        print(f"[KITSUNE ERROR] Failed to show modal dialog: {str(e)}")
+        
+        def draw(self, context):
+            self.layout.label(text=message)
+        
+        try:
+            bpy.context.window_manager.popup_menu(draw, title=title, icon=icon)
+        except Exception as e2:
+            print(f"[KITSUNE ERROR] Failed to show popup menu: {str(e2)}")
 
 def cleanup_unused_files():
     """

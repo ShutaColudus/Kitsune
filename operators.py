@@ -39,8 +39,11 @@ class KITSUNE_OT_chat_in_dialog(Operator):
     )
     
     def invoke(self, context, event):
-        # Set up the dialog properties
-        return context.window_manager.invoke_props_dialog(self, width=self.width)
+        # 修正: ダイアログサイズの指定方法を変更
+        wm = context.window_manager
+        # pixelsではなく、UIユニットで指定（およそ20ピクセルが1ユニット）
+        width_units = self.width // 20
+        return wm.invoke_props_dialog(self, width=width_units)
     
     def draw(self, context):
         layout = self.layout
@@ -154,24 +157,23 @@ class KITSUNE_OT_send_from_dialog(Operator):
     bl_description = "Send your message to Kitsune from the dialog"
     
     def execute(self, context):
-        # Get the input text from the active dialog
+        # 修正: ダイアログからメッセージを取得して送信する方法を改善
         for window in context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type == 'PROPERTIES':
-                    for region in area.regions:
-                        if region.type == 'WINDOW':
-                            for space in area.spaces:
-                                if space.type == 'PROPERTIES':
-                                    for operator in context.window_manager.operators:
-                                        if operator.bl_idname == "kitsune.chat_in_dialog":
-                                            message = operator.input_text
-                                            if message.strip():
-                                                # Reset the input field
-                                                operator.input_text = ""
-                                                # Send the message using the regular send operator
-                                                bpy.context.scene.kitsune_ui.chat_input = message
-                                                bpy.ops.kitsune.send_message()
-                                            return {'FINISHED'}
+                for region in area.regions:
+                    for space in area.spaces:
+                        for operator in context.window_manager.operators:
+                            if operator.bl_idname == "kitsune.chat_in_dialog":
+                                message = operator.input_text
+                                if message.strip():
+                                    # Reset the input field
+                                    operator.input_text = ""
+                                    # Send the message using the regular send operator
+                                    bpy.ops.kitsune.send_message(
+                                        'EXEC_DEFAULT', 
+                                        message=message
+                                    )
+                                return {'FINISHED'}
         
         self.report({'WARNING'}, "Could not find dialog input text")
         return {'CANCELLED'}

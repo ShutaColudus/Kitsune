@@ -79,6 +79,29 @@ def check_ui_capabilities():
     else:
         utils.log_error("UI resources check failed - モーダルダイアログが表示されない可能性があります")
 
+# 修正: 起動時メッセージ表示用のオペレーター
+class KITSUNE_OT_startup_message(bpy.types.Operator):
+    """Show startup message."""
+    
+    bl_idname = "kitsune.startup_message"
+    bl_label = "Kitsune起動完了"
+    bl_options = {'REGISTER', 'INTERNAL'}
+    
+    message: bpy.props.StringProperty(
+        default="Kitsuneアドオンが正常に登録されました。\nサイドバーの'Kitsune'タブからアクセスできます。"
+    )
+    
+    def execute(self, context):
+        return {'FINISHED'}
+    
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=300)
+    
+    def draw(self, context):
+        layout = self.layout
+        for line in self.message.split('\n'):
+            layout.label(text=line)
+
 def register():
     """Register the addon."""
     # Set debug mode from environment variable if available
@@ -101,6 +124,9 @@ def register():
     # UIリソースのチェック
     check_ui_capabilities()
     
+    # 起動メッセージ表示用のオペレーターを登録
+    bpy.utils.register_class(KITSUNE_OT_startup_message)
+    
     # Register preferences 
     bpy.utils.register_class(preferences.KitsuneAddonPreferences)
     
@@ -115,12 +141,8 @@ def register():
     
     # インストール確認メッセージをモーダルで表示
     def show_startup_message():
-        utils.show_message_box(
-            "Kitsuneアドオンが正常に登録されました。\n"
-            "サイドバーの'Kitsune'タブからアクセスできます。",
-            "Kitsune起動完了",
-            'INFO'
-        )
+        bpy.ops.kitsune.startup_message('INVOKE_DEFAULT')
+        return None  # タイマーを一度だけ実行
     
     # 少し遅延させてメッセージを表示（Blenderの起動完了後に表示）
     bpy.app.timers.register(show_startup_message, first_interval=1.0)
@@ -128,9 +150,10 @@ def register():
 def unregister():
     """Unregister the addon."""
     # タイマーの削除
-    for timer in bpy.app.timers.items():
-        if 'show_startup_message' in str(timer):
-            bpy.app.timers.remove(timer)
+    if hasattr(bpy.app, "timers"):
+        for timer in list(bpy.app.timers):
+            if 'show_startup_message' in str(timer):
+                bpy.app.timers.remove(timer)
     
     # Unregister UI components
     ui.unregister()
@@ -140,6 +163,12 @@ def unregister():
     
     # Unregister preferences
     bpy.utils.unregister_class(preferences.KitsuneAddonPreferences)
+    
+    # 起動メッセージ表示用のオペレーターを登録解除
+    try:
+        bpy.utils.unregister_class(KITSUNE_OT_startup_message)
+    except:
+        pass
     
     utils.log_info("Kitsune addon unregistered")
 
