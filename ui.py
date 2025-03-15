@@ -412,8 +412,7 @@ class KITSUNE_OT_validate_api_key(Operator):
             
             return {'FINISHED'}
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
@@ -452,8 +451,7 @@ class KITSUNE_OT_preview_code(Operator):
             
             return {'FINISHED'}
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
@@ -487,8 +485,7 @@ class KITSUNE_OT_execute_code(Operator):
             
             return {'FINISHED'}
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
@@ -517,8 +514,7 @@ class KITSUNE_OT_execute_code(Operator):
                 return context.window_manager.invoke_props_dialog(self, width=600)
             return self.execute(context)
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI invoke error: {str(e)}")
             return {'CANCELLED'}
@@ -539,8 +535,7 @@ class KITSUNE_OT_cancel_code(Operator):
             self.report({'INFO'}, "Code execution cancelled")
             return {'FINISHED'}
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
@@ -608,8 +603,7 @@ class KITSUNE_OT_send_message(Operator):
             
             return {'FINISHED'}
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
@@ -700,8 +694,7 @@ class KITSUNE_OT_clear_chat(Operator):
             self.report({'INFO'}, "Conversation cleared")
             return {'FINISHED'}
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI execute error: {str(e)}")
             return {'CANCELLED'}
@@ -721,8 +714,7 @@ class KITSUNE_OT_clear_chat(Operator):
         try:
             return context.window_manager.invoke_props_dialog(self)
         except Exception as e:
-            layout = self.layout
-            layout.label(text=f"Error: {str(e)}", icon='ERROR')
+            self.report({'ERROR'}, f"Error: {str(e)}")
             from . import utils
             utils.log_error(f"UI invoke error: {str(e)}")
             return {'CANCELLED'}
