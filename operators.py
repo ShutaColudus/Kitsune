@@ -48,7 +48,7 @@ class KITSUNE_OT_chat_in_dialog(Operator):
     def draw(self, context):
         layout = self.layout
         ui_props = context.scene.kitsune_ui
-        preferences = context.preferences.addons["kitsune"].preferences
+        preferences = context.preferences.addons[__package__].preferences
         
         # Header with provider info
         provider_name = preferences.api_provider.capitalize()
