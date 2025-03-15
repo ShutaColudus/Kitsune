@@ -107,8 +107,21 @@ class KITSUNE_OT_startup_message(bpy.types.Operator):
         for line in self.message.split('\n'):
             layout.label(text=line)
 
+# Timer function for showing startup message
+def show_startup_message():
+    try:
+        bpy.ops.kitsune.startup_message('INVOKE_DEFAULT')
+    except Exception as e:
+        utils.log_error(f"Error showing startup message: {str(e)}")
+    return None  # Run timer only once
+
+# Global timer handle
+_timer_handle = None
+
 def register():
     """Register the addon."""
+    global _timer_handle
+    
     # Set debug mode from environment variable if available
     debug_env = os.environ.get("KITSUNE_DEBUG", "").lower()
     if debug_env in ("1", "true", "yes", "on"):
@@ -133,8 +146,20 @@ def register():
     # Check UI resources
     check_ui_capabilities()
     
+    # Unregister first to prevent 'already registered' errors
+    try:
+        bpy.utils.unregister_class(KITSUNE_OT_startup_message)
+    except:
+        pass
+    
     # Register startup message operator
     bpy.utils.register_class(KITSUNE_OT_startup_message)
+    
+    # Unregister preferences first to prevent 'already registered' errors
+    try:
+        bpy.utils.unregister_class(preferences.KitsuneAddonPreferences)
+    except:
+        pass
     
     # Register preferences 
     bpy.utils.register_class(preferences.KitsuneAddonPreferences)
@@ -148,36 +173,48 @@ def register():
     # Display registration complete message
     utils.log_info("Kitsune addon registered successfully")
     
-    # Show installation confirmation message in modal dialog
-    def show_startup_message():
-        bpy.ops.kitsune.startup_message('INVOKE_DEFAULT')
-        return None  # Run timer only once
-    
     # Add a slight delay to show the message (after Blender startup is complete)
-    bpy.app.timers.register(show_startup_message, first_interval=1.0)
+    try:
+        if hasattr(bpy.app, "timers"):
+            _timer_handle = bpy.app.timers.register(show_startup_message, first_interval=1.0)
+    except Exception as e:
+        utils.log_error(f"Error registering timer: {str(e)}")
 
 def unregister():
     """Unregister the addon."""
+    global _timer_handle
+    
     # Remove timers
-    if hasattr(bpy.app, "timers"):
-        for timer in list(bpy.app.timers):
-            if 'show_startup_message' in str(timer):
-                bpy.app.timers.remove(timer)
+    try:
+        if hasattr(bpy.app, "timers") and _timer_handle is not None:
+            if _timer_handle in bpy.app.timers:
+                bpy.app.timers.unregister(_timer_handle)
+    except Exception as e:
+        utils.log_error(f"Error removing timer: {str(e)}")
     
     # Unregister UI components
-    ui.unregister()
+    try:
+        ui.unregister()
+    except Exception as e:
+        utils.log_error(f"Error unregistering UI: {str(e)}")
     
     # Unregister operators
-    operators.unregister()
+    try:
+        operators.unregister()
+    except Exception as e:
+        utils.log_error(f"Error unregistering operators: {str(e)}")
     
     # Unregister preferences
-    bpy.utils.unregister_class(preferences.KitsuneAddonPreferences)
+    try:
+        bpy.utils.unregister_class(preferences.KitsuneAddonPreferences)
+    except Exception as e:
+        utils.log_error(f"Error unregistering preferences: {str(e)}")
     
     # Unregister startup message operator
     try:
         bpy.utils.unregister_class(KITSUNE_OT_startup_message)
-    except:
-        pass
+    except Exception as e:
+        utils.log_error(f"Error unregistering startup message: {str(e)}")
     
     utils.log_info("Kitsune addon unregistered")
 
